@@ -15,13 +15,13 @@ import { getAnalytics } from "firebase/analytics";
 import { FirebaseOptions } from "firebase/app";
 
 const config: FirebaseOptions = {
-  apiKey: "AIzaSyDnVqs8TBiIicdOcqb5WWqCUDB_GMywzs4",
-  authDomain: "venefish-4b609.firebaseapp.com",
-  projectId: "venefish-4b609",
-  storageBucket: "venefish-4b609.appspot.com",
-  messagingSenderId: "976336889830",
-  appId: "1:976336889830:web:030a5e0b9e6053da961827",
-  measurementId: "G-GFMBQQW6PC",
+  apiKey: "AIzaSyAFX6l-n9aThfNSpyIP54m6v93TKeBYkaU",
+  authDomain: "trading-data-visualizer.firebaseapp.com",
+  databaseURL: "https://trading-data-visualizer-default-rtdb.firebaseio.com",
+  projectId: "trading-data-visualizer",
+  storageBucket: "trading-data-visualizer.appspot.com",
+  messagingSenderId: "140572083394",
+  appId: "1:140572083394:web:6716ed10d63e71216fa75b"
 };
 
 const FirebaseProviderSDKs: FC<{ children: ReactNode }> = ({ children }) => {

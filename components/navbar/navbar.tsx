@@ -8,14 +8,14 @@ import { FC } from "react";
 export const NavBar: FC = () => {
   return (
     <>
-      <div className="animate-in fade-in w-full">
+      <div className="animate-in fade-in w-full bg-black border-b border-gray-600">
         <nav className="container px-6 md:px-8 py-4">
           <div className="flex items-center">
             <Link href="/" className="hover:opacity-80 transition-opacity">
               <div className="flex items-center">
                 <FishIcon className="w-8 h-8 mr-2 inline" />{" "}
-                <span className="text-xl font-semibold tracking-tighter text-slate-800 mr-6">
-                  Venefish
+                <span className="text-xl font-semibold tracking-tighter text-white mr-6">
+                  TradeTrackr
                 </span>
               </div>
             </Link>
