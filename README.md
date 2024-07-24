@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Venefish 🐟
 
 ### Boilerplate for React TypeScript projects using Next.js, shadcn/ui, Tailwind and Firebase on Vercel!
@@ -32,3 +33,6 @@ The following is only needed if you want to use `firebase/admin` (not part of th
 - You need to define the same `FIREBASE_ADMIN_SDK` environment variable in Vercel
 
 **Created by [⬡ Enesien Software](https://enesien.com)**
+=======
+# tradetrackr
+>>>>>>> origin/main
