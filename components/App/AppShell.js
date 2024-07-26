@@ -3,6 +3,7 @@ import React, { useEffect, useState } from "react";
 import Sidebar from "./Sidebar";
 import { useRouter } from "next/navigation";
 import { useUser } from "reactfire";
+import { LoadingSpinner } from "../ui/spinner";
 
 const AppShell = ({ children }) => {
   const { data: user, status } = useUser();
@@ -22,7 +23,11 @@ const AppShell = ({ children }) => {
   }, [user, status, router]);
 
   if (isLoading) {
-    return <div>Loading...</div>; // You can customize the loading state
+    return (
+      <div className="h-screen flex items-center justify-center">
+        <LoadingSpinner size={45} />
+      </div>
+    );
   }
 
   return (

@@ -19,7 +19,7 @@ import { GoSidebarCollapse } from "react-icons/go";
 import { LuLayoutDashboard, LuUpload, LuSettings } from "react-icons/lu";
 import { FiPieChart } from "react-icons/fi";
 import { MdNotificationsActive } from "react-icons/md";
-import { IoIosPeople } from "react-icons/io";
+import { IoIosPeople, IoIosSettings } from "react-icons/io";
 import { MdDashboard } from "react-icons/md";
 import { GoPerson } from "react-icons/go";
 import { AiOutlineTool } from "react-icons/ai";
@@ -28,10 +28,23 @@ import { HiEllipsisVertical } from "react-icons/hi2";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useUser } from "reactfire";
+import { SlLogout } from "react-icons/sl";
+import { getAuth, signOut } from "firebase/auth";
+import { toast } from "../ui/use-toast";
 
 const Sidebar = () => {
   const [isExpanded, setIsExpanded] = useState(true);
   const router = useRouter();
+  const { data } = useUser();
+  const doLogout = async () => {
+    await signOut(getAuth());
+    toast({
+      title: "Logged out",
+      description: "You have been logged out.",
+    });
+    router.replace("/");
+  };
 
   const toggleSidebar = () => {
     setIsExpanded(!isExpanded);
@@ -86,6 +99,7 @@ const Sidebar = () => {
           <Button
             variant={"ghost"}
             className="w-full flex items-center justify-start"
+            onClick={() => router.push("/app/signals")}
           >
             <MdNotificationsActive className={`mr-2 h-4 w-4 shrink-0`} />
             <p className={`${isExpanded ? "" : "hidden"} font-normal`}>
@@ -95,6 +109,7 @@ const Sidebar = () => {
           <Button
             variant={"ghost"}
             className="w-full flex items-center justify-start"
+            onClick={() => router.push("/app/community")}
           >
             <IoIosPeople className={`mr-2 h-4 w-4 shrink-0`} />
             <p className={`${isExpanded ? "" : "hidden"} font-normal`}>
@@ -113,6 +128,7 @@ const Sidebar = () => {
           <Button
             variant={"ghost"}
             className="w-full flex items-center justify-start"
+            onClick={() => router.push("/app/settings/profile")}
           >
             <GoPerson className={`mr-2 h-4 w-4 shrink-0`} />
             <p className={`${isExpanded ? "" : "hidden"} font-normal`}>
@@ -122,6 +138,7 @@ const Sidebar = () => {
           <Button
             variant={"ghost"}
             className="w-full flex items-center justify-start"
+            onClick={() => router.push("/app/settings/financial")}
           >
             <AiOutlineTool className={`mr-2 h-4 w-4 shrink-0`} />
             <p className={`${isExpanded ? "" : "hidden"} font-normal`}>
@@ -131,6 +148,7 @@ const Sidebar = () => {
           <Button
             variant={"ghost"}
             className="w-full flex items-center justify-start"
+            onClick={() => router.push("/app/settings/subscription")}
           >
             <CiCreditCard1 className={`mr-2 h-4 w-4 shrink-0`} />
             <p className={`${isExpanded ? "" : "hidden"} font-normal`}>
@@ -151,7 +169,7 @@ const Sidebar = () => {
           >
             <div className="flex flex-row items-center w-full">
               <Image
-                src={"/avatars/01.png"}
+                src={data?.photoURL || "/avatars/01.png"}
                 width={100}
                 height={100}
                 className={`w-9 h-9 rounded-full ${isExpanded && "mr-3"}`}
@@ -160,9 +178,9 @@ const Sidebar = () => {
                 <>
                   <div className="flex flex-row items-center w-full flex-1">
                     <div className="flex flex-col items-start flex-1">
-                      <p>Omar Casey</p>
+                      <p>{data?.displayName || data?.email?.split('@')[0] || "User"}</p>
                       <p className="text-gray-400 text-xs truncate">
-                        omarcasey4@gmail.com
+                        {data?.email || "No email"}
                       </p>
                     </div>
                     <HiEllipsisVertical className="w-5 h-5 shrink-0 ml-2" />
@@ -172,18 +190,55 @@ const Sidebar = () => {
             </div>
           </Button>
         </DropdownMenuTrigger>
-        <DropdownMenuContent align="start" className="w-64 my-4 shadow-2xl shadow-blue-900">
-          <DropdownMenuLabel>
-            <div className="flex flex-col text-xs font-normal">
-              <p className="text-gray-400 font-sans">Signed in as</p>
-              <p>omarcasey4@gmail.com</p>
+        <DropdownMenuContent
+          className="w-64 my-4 shadow-2xl shadow-blue-900"
+          align="start"
+        >
+          <DropdownMenuLabel className="font-normal">
+            <div className="flex flex-col space-y-1">
+              <p className="text-xs text-muted-foreground leading-none font-sans">
+                {/* {data?.displayName ||
+                data?.email?.slice(0, data?.email?.indexOf("@")) ||
+                "Anonymous"} */}
+                Signed in as
+              </p>
+              <p className="text-xs leading-none">
+                {data?.email || "No email"}
+              </p>
             </div>
           </DropdownMenuLabel>
           <DropdownMenuSeparator />
-          <DropdownMenuItem>Profile</DropdownMenuItem>
-          <DropdownMenuItem>Billing</DropdownMenuItem>
-          <DropdownMenuItem>Team</DropdownMenuItem>
-          <DropdownMenuItem>Subscription</DropdownMenuItem>
+          <DropdownMenuGroup>
+            <DropdownMenuItem asChild>
+              <Link href={"/app/dashboard"}>
+                <MdDashboard className={`mr-2 h-4 w-4 shrink-0`} />
+                <p>Dashboard</p>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href={"/app/strategies"}>
+                <FiPieChart className={`mr-2 h-4 w-4 shrink-0`} />
+                <p>Strategies</p>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href={"/app/signals"}>
+                <MdNotificationsActive className={`mr-2 h-4 w-4 shrink-0`} />
+                <p>Signals</p>
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href={"/app/settings/profile"}>
+                <IoIosSettings className={`mr-2 h-4 w-4 shrink-0`} />
+                <p>Settings</p>
+              </Link>
+            </DropdownMenuItem>
+          </DropdownMenuGroup>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={doLogout}>
+            <SlLogout className={`mr-2 h-3 w-3 shrink-0`} />
+            <p>Log out</p>
+          </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
     </div>

@@ -40,11 +40,11 @@ export const ProviderLoginButtons: FC<Props> = ({ onSignIn }) => {
         disabled={isLoading}
         onClick={async () => {
           const provider = new GoogleAuthProvider();
-          toast({
-            title: "Oops!",
-            description: "Provider not configured, yet.",
-          });
-          // await doProviderSignIn(provider);
+          // toast({
+          //   title: "Oops!",
+          //   description: "Provider not configured, yet.",
+          // });
+          await doProviderSignIn(provider);
         }}
       >
         <svg
@@ -58,7 +58,7 @@ export const ProviderLoginButtons: FC<Props> = ({ onSignIn }) => {
         </svg>
         Google
       </Button>
-      <Button
+      {/* <Button
         className="w-full"
         disabled={isLoading}
         onClick={async () => {
@@ -72,7 +72,7 @@ export const ProviderLoginButtons: FC<Props> = ({ onSignIn }) => {
       >
         <GithubIcon className="w-4 h-4 mr-2" />
         Github
-      </Button>
+      </Button> */}
     </>
   );
 };

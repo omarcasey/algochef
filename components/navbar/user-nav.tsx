@@ -13,8 +13,13 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { toast } from "@/components/ui/use-toast";
 import { getAuth, signOut } from "firebase/auth";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
+import { MdDashboard, MdNotificationsActive } from "react-icons/md";
 import { useUser } from "reactfire";
+import { IoIosSettings } from "react-icons/io";
+import { SlLogout } from "react-icons/sl";
+import { FiPieChart } from "react-icons/fi";
 
 export function UserNav() {
   const { data } = useUser();
@@ -42,28 +47,54 @@ export function UserNav() {
           </Avatar>
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-56" align="end" forceMount>
+      <DropdownMenuContent
+        className="w-56 my-4 shadow-2xl shadow-blue-900"
+        align="center"
+        forceMount
+      >
         <DropdownMenuLabel className="font-normal">
           <div className="flex flex-col space-y-1">
-            <p className="text-sm font-medium leading-none">
-              {data?.displayName ||
+            <p className="text-xs text-muted-foreground leading-none font-sans">
+              {/* {data?.displayName ||
                 data?.email?.slice(0, data?.email?.indexOf("@")) ||
-                "Anonymous"}
+                "Anonymous"} */}
+              Signed in as
             </p>
-            <p className="text-xs leading-none text-muted-foreground">
-              {data?.email || "No email"}
-            </p>
+            <p className="text-xs leading-none">{data?.email || "No email"}</p>
           </div>
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         <DropdownMenuGroup>
-          <DropdownMenuItem>Profile</DropdownMenuItem>
-          <DropdownMenuItem>Billing</DropdownMenuItem>
-          <DropdownMenuItem>Settings</DropdownMenuItem>
-          <DropdownMenuItem>New Team</DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href={"/app/dashboard"}>
+              <MdDashboard className={`mr-2 h-4 w-4 shrink-0`} />
+              <p>Dashboard</p>
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href={"/app/strategies"}>
+              <FiPieChart className={`mr-2 h-4 w-4 shrink-0`} />
+              <p>Strategies</p>
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href={"/app/signals"}>
+              <MdNotificationsActive className={`mr-2 h-4 w-4 shrink-0`} />
+              <p>Signals</p>
+            </Link>
+          </DropdownMenuItem>
+          <DropdownMenuItem asChild>
+            <Link href={"/app/settings/profile"}>
+              <IoIosSettings className={`mr-2 h-4 w-4 shrink-0`} />
+              <p>Settings</p>
+            </Link>
+          </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={doLogout}>Log out</DropdownMenuItem>
+        <DropdownMenuItem onClick={doLogout}>
+          <SlLogout className={`mr-2 h-3 w-3 shrink-0`} />
+          <p>Log out</p>
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   );
