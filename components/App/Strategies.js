@@ -1,10 +1,11 @@
-"use client"
+"use client";
 
-import Image from "next/image"
-import { MoreHorizontal } from "lucide-react"
+import React, { useEffect, useState } from 'react';
+import Image from "next/image";
+import { MoreHorizontal } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import {
   Card,
   CardContent,
@@ -12,14 +13,14 @@ import {
   CardFooter,
   CardHeader,
   CardTitle,
-} from "@/components/ui/card"
+} from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
+} from "@/components/ui/dropdown-menu";
 import {
   Table,
   TableBody,
@@ -27,9 +28,41 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from "@/components/ui/table"
+} from "@/components/ui/table";
 
 export default function Strategies() {
+  const [strategies, setStrategies] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const fetchStrategies = async () => {
+      try {
+        const user = auth.currentUser;
+        if (user) {
+          const uid = user.uid;
+          // Assume 'strategies' is the collection where user strategies are stored
+          const strategiesSnapshot = await firestore
+            .collection("users")
+            .doc(uid)
+            .collection("strategies")
+            .get();
+          const strategiesList = strategiesSnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }));
+          setStrategies(strategiesList);
+        }
+      } catch (err) {
+        setError(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchStrategies();
+  }, []);
+
   return (
     <Card className="bg-black">
       <CardHeader>
@@ -285,5 +318,5 @@ export default function Strategies() {
         </div>
       </CardFooter>
     </Card>
-  )
+  );
 }
