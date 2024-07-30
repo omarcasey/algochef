@@ -31,13 +31,9 @@ const AppShell = ({ children }) => {
   }
 
   return (
-    <div className="flex flex-row h-screen dark bg-default-100">
+    <div className="flex flex-row h-screen dark bg-black">
       <Sidebar />
-      <div className="flex flex-col flex-1">
-        <main className="flex flex-1 bg-default-100 overflow-y-auto p-7">
-          {children}
-        </main>
-      </div>
+      <main className="flex-1 flex overflow-y-auto p-7">{children}</main>
     </div>
   );
 };

@@ -135,13 +135,13 @@ const UserStrategies = () => {
           onChange={(event) => setFilter(event.target.value)}
           className="max-w-sm"
         />
-        <Button variant="outline" className="ml-auto">
-          Add
-          <Plus className="ml-2 h-4 w-4" />
-        </Button>
-        <Button disabled={selectedRows.size === 0}>
-          Generate Report
-        </Button>
+        <Link href="/app/strategies/import" className="ml-auto">
+          <Button variant="outline" className="">
+            Add
+            <Plus className="ml-2 h-4 w-4" />
+          </Button>
+        </Link>
+        <Button disabled={selectedRows.size === 0}>Generate Report</Button>
         {/* <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="outline" className="ml-auto">
