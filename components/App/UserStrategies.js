@@ -58,6 +58,8 @@ const UserStrategies = () => {
   const [strategyToDelete, setStrategyToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  const [isGenerateDialogOpen, setIsGenerateDialogOpen] = useState(false);
+
   // Create a query to filter strategies by userId
   const strategiesQuery = query(
     collection(firestore, "strategies"),
@@ -141,17 +143,12 @@ const UserStrategies = () => {
             <Plus className="ml-2 h-4 w-4" />
           </Button>
         </Link>
-        <Button disabled={selectedRows.size === 0}>Generate Report</Button>
-        {/* <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="outline" className="ml-auto">
-              Columns <ChevronDown className="ml-2 h-4 w-4" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
-            Add column visibility toggles if needed
-          </DropdownMenuContent>
-        </DropdownMenu> */}
+        <Button
+          disabled={selectedRows.size === 0}
+          onClick={() => setIsGenerateDialogOpen(true)}
+        >
+          Generate Report
+        </Button>
       </div>
       <div className="rounded-md border">
         <Table>
@@ -164,7 +161,7 @@ const UserStrategies = () => {
                 />
               </TableHead>
               <TableHead>Name</TableHead>
-              <TableHead>Weight</TableHead>
+              {/* <TableHead>Weight</TableHead> */}
               <TableHead>Details</TableHead>
               <TableHead>Date Created</TableHead>
               <TableHead>Type</TableHead>
@@ -177,6 +174,8 @@ const UserStrategies = () => {
                 <TableRow
                   key={strategy.id}
                   data-state={selectedRows.has(strategy.id) ? "selected" : ""}
+                  onClick={() => handleRowCheckboxChange(strategy.id)} // Select row on click
+                  className="" // Add a pointer cursor to indicate clickable row
                 >
                   <TableCell>
                     <Checkbox
@@ -184,12 +183,16 @@ const UserStrategies = () => {
                       onCheckedChange={() =>
                         handleRowCheckboxChange(strategy.id)
                       }
+                      onClick={(e) => e.stopPropagation()}
                     />
                   </TableCell>
                   <TableCell>{strategy.name}</TableCell>
-                  <TableCell>1.0</TableCell>
                   <TableCell>
-                    <Link href={`/app/strategies/${strategy.id}`}>
+                    <Link
+                      href={`/app/strategies/${strategy.id}`}
+                      onClick={(e) => e.stopPropagation()}
+                      className="flex w-min"
+                    >
                       <div className="bg-green-950 text-green-400 font-medium cursor-pointer px-2 py-1.5 rounded-md text-xs w-24 flex items-center justify-center">
                         View Report
                       </div>
@@ -279,6 +282,70 @@ const UserStrategies = () => {
             >
               {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Delete
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={isGenerateDialogOpen}
+        onOpenChange={setIsGenerateDialogOpen}
+      >
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Generate Report</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to generate a report with the following
+              strategies?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-2 overflow-y-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="">Strategy</TableHead>
+                  <TableHead>Symbol</TableHead>
+                  <TableHead>Type</TableHead>
+                  <TableHead className="">Weight</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {Array.from(selectedRows).map((strategyId) => {
+                  const strategy = strategies.find((s) => s.id === strategyId);
+                  if (!strategy) return null;
+
+                  return (
+                    <TableRow key={strategy.id}>
+                      <TableCell>{strategy.name}</TableCell>
+                      <TableCell><p className="text-orange-400">@ES.D</p></TableCell>
+                      <TableCell>
+                        <div className="bg-purple-950 text-purple-400 font-medium px-2 py-1.5 rounded-md text-xs w-16 flex items-center justify-center">
+                          Future
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <Input type="number" defaultValue={(1.0).toFixed(1)} />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsGenerateDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+            // variant="destructive"
+            // onClick={handleDeleteStrategy}
+            // disabled={isDeleting}
+            >
+              {/* {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} */}
+              Generate
             </Button>
           </DialogFooter>
         </DialogContent>
