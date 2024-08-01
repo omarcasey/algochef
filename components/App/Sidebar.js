@@ -138,7 +138,7 @@ const Sidebar = () => {
           <Button
             variant={"ghost"}
             className="w-full flex items-center justify-start"
-            onClick={() => router.push("/app/settings/financial")}
+            onClick={() => router.push("/app/settings/financial/instruments")}
           >
             <AiOutlineTool className={`mr-2 h-4 w-4 shrink-0`} />
             <p className={`${isExpanded ? "" : "hidden"} font-normal`}>

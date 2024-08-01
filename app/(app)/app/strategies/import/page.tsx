@@ -16,6 +16,7 @@ import {
   SelectGroup,
   SelectItem,
   SelectLabel,
+  SelectSeparator,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
@@ -24,6 +25,8 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { LoadingSpinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
+import { query, collection, where } from "firebase/firestore";
+import { useFirestore, useFirestoreCollectionData, useUser } from "reactfire";
 
 const Import = () => {
   const [data, setData] = useState([]);
@@ -39,6 +42,18 @@ const Import = () => {
     space: false,
   });
   const [loading, setLoading] = useState(false); // Loading state
+
+  // Fetch the instruments data
+  const { data: user, status: userStatus } = useUser();
+  const firestore = useFirestore();
+
+  const instrumentsQuery = query(
+    collection(firestore, "instruments"),
+    where("userId", "==", user ? user.uid : "")
+  );
+
+  const { data: instruments, status: instrumentsStatus } =
+    useFirestoreCollectionData(instrumentsQuery, { idField: "id" });
 
   useEffect(() => {
     if (fileContent) {
@@ -113,6 +128,14 @@ const Import = () => {
     }));
   };
 
+  if (userStatus === "loading" || instrumentsStatus === "loading") {
+    return (
+      <div className="h-screen w-full flex items-center justify-center">
+        <LoadingSpinner size={45} />
+      </div>
+    );
+  }
+
   return (
     <div className="w-full flex flex-col">
       <div className="py-4">
@@ -126,9 +149,61 @@ const Import = () => {
       {loading && <LoadingSpinner />}
       {!loading && data.length > 0 && (
         <>
+          <div className="flex gap-3 mb-6 justify-center">
+            <Input
+              placeholder="Enter strategy name..."
+              className="w-[20rem] border-muted-foreground"
+            />
+            <Button variant={"teal"} className="w-44 bg-blue-600">
+              Import
+            </Button>
+          </div>
           <div className="flex flex-row gap-3 mb-3">
-            <Select className="">
-              <SelectTrigger className="w-[180px]">
+            <Select>
+              <SelectTrigger className="w-[14rem] mr-5">
+                <SelectValue placeholder="Instruments" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel className="">Select an Instrument</SelectLabel>
+                  <SelectItem value="ex1">Example 1</SelectItem>
+                  <SelectItem value="ex2">Example 2</SelectItem>
+                  <SelectItem value="ex3">Example 3</SelectItem>
+                  <SelectSeparator/>
+                  <SelectLabel>Custom</SelectLabel>
+                  {instruments.map((instrument) => (
+                    <SelectItem key={instrument.id} value={instrument.name}>
+                      {instrument.name} - {instrument.symbol}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+            <Select>
+              <SelectTrigger className="w-[14rem]">
+                <SelectValue placeholder="Timeframes" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel>Select a Timeframe</SelectLabel>
+                  <SelectItem value="Daily">Daily</SelectItem>
+                  <SelectItem value="Weekly">Weekly</SelectItem>
+                  <SelectItem value="Monthly">Monthly</SelectItem>
+                  <SelectItem value="Quarterly">Quarterly</SelectItem>
+                  <SelectItem value="YTD">Year-to-Date (YTD)</SelectItem>
+                  <SelectItem value="Annual">Annual</SelectItem>
+                  <SelectSeparator/>
+                  <SelectLabel>Custom</SelectLabel>
+                  {instruments.map((instrument) => (
+                    <SelectItem key={instrument.id} value={instrument.name}>
+                      {instrument.name} - {instrument.symbol}
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+            <Select>
+              <SelectTrigger className="w-[180px] ml-auto">
                 <SelectValue placeholder="Select a Format" />
               </SelectTrigger>
               <SelectContent>
@@ -140,7 +215,7 @@ const Import = () => {
                 </SelectGroup>
               </SelectContent>
             </Select>
-            <Button className="ml-auto" size="sm" variant={"secondary"}>
+            <Button className="" size="sm" variant={"secondary"}>
               Save Format
             </Button>
             <Button size={"sm"} variant={"outline"}>
@@ -160,7 +235,6 @@ const Import = () => {
                           onValueChange={(value) =>
                             handleLabelChange(index, value)
                           }
-                          className="ml-2"
                         >
                           <SelectTrigger className="border-none bg-transparent focus:ring-transparent focus:border-none">
                             <SelectValue placeholder="" />
@@ -168,7 +242,6 @@ const Import = () => {
                           <SelectContent>
                             <SelectGroup>
                               <SelectLabel>Select a Label</SelectLabel>
-                              <SelectItem value=" ">{"."}</SelectItem>
                               <SelectItem value="Entry Date">
                                 Entry Date
                               </SelectItem>
@@ -190,6 +263,7 @@ const Import = () => {
                               <SelectItem value="Long/Short">
                                 Long/Short
                               </SelectItem>
+                              <SelectItem value="P/L">P/L</SelectItem>
                               <SelectItem value="Size">Size</SelectItem>
                               <SelectItem value="Symbol">Symbol</SelectItem>
                               <SelectItem value="ATR">ATR</SelectItem>
@@ -297,15 +371,6 @@ const Import = () => {
             <div className="flex flex-row items-start">
               <Checkbox id="merge" className="mr-2" />
               <Label htmlFor="merge">Merge lines two at a time</Label>
-            </div>
-            <div className="mt-3 ml-auto flex gap-3">
-              <Input
-                placeholder="Enter strategy name..."
-                className="ml-auto w-[20rem]"
-              />
-              <Button variant={"teal"} className="w-44 bg-blue-600">
-                Import
-              </Button>
             </div>
           </div>
         </>

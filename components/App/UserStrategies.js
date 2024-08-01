@@ -207,7 +207,10 @@ const UserStrategies = () => {
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" className="h-8 w-8 p-0">
+                        <Button
+                          variant="ghost"
+                          className="h-8 w-8 p-0"
+                        >
                           <span className="sr-only">Open menu</span>
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
@@ -215,9 +218,10 @@ const UserStrategies = () => {
                       <DropdownMenuContent align="end">
                         <DropdownMenuLabel>Actions</DropdownMenuLabel>
                         <DropdownMenuItem
-                          onClick={() =>
-                            navigator.clipboard.writeText(strategy.id)
-                          }
+                          onClick={(e) => {
+                            navigator.clipboard.writeText(strategy.id);
+                            e.stopPropagation();
+                          }}
                         >
                           Copy strategy ID
                         </DropdownMenuItem>
@@ -317,7 +321,9 @@ const UserStrategies = () => {
                   return (
                     <TableRow key={strategy.id}>
                       <TableCell>{strategy.name}</TableCell>
-                      <TableCell><p className="text-orange-400">@ES.D</p></TableCell>
+                      <TableCell>
+                        <p className="text-orange-400">@ES.D</p>
+                      </TableCell>
                       <TableCell>
                         <div className="bg-purple-950 text-purple-400 font-medium px-2 py-1.5 rounded-md text-xs w-16 flex items-center justify-center">
                           Future
