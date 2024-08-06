@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import Papa from "papaparse";
 import {
   Table,
   TableBody,
@@ -20,6 +19,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
@@ -42,6 +50,11 @@ const Import = () => {
     space: false,
   });
   const [loading, setLoading] = useState(false); // Loading state
+  const [isSaveFormatOpen, setSaveFormatOpen] = useState(false);
+  const [mergeLines, setMergeLines] = useState(false);
+  const [selectedInstrument, setSelectedInstrument] = useState(null);
+  const [selectedTimeframe, setSelectedTimeframe] = useState(null);
+  const [selectedFormat, setSelectedFormat] = useState(null);
 
   // Fetch the instruments data
   const { data: user, status: userStatus } = useUser();
@@ -52,8 +65,26 @@ const Import = () => {
     where("userId", "==", user ? user.uid : "")
   );
 
+  const timeframesQuery = query(
+    collection(firestore, "timeframes"),
+    where("userId", "==", user ? user.uid : "")
+  );
+
+  const formatsQuery = query(
+    collection(firestore, "formats"),
+    where("userId", "==", user ? user.uid : "")
+  );
+
   const { data: instruments, status: instrumentsStatus } =
     useFirestoreCollectionData(instrumentsQuery, { idField: "id" });
+
+  const { data: timeframes, status: timeframesStatus } =
+    useFirestoreCollectionData(timeframesQuery, { idField: "id" });
+
+  const { data: formats, status: formatsStatus } = useFirestoreCollectionData(
+    formatsQuery,
+    { idField: "id" }
+  );
 
   useEffect(() => {
     if (fileContent) {
@@ -80,7 +111,6 @@ const Import = () => {
         const parsedData = parseWithDelimiters(fileContent, delimiters);
 
         // Skip lines if needed
-        // const skip = skipLines ? Math.max(linesToSkip - 1, 0) : 0;
         const filteredData = skipLines
           ? parsedData.slice(linesToSkip)
           : parsedData;
@@ -115,10 +145,24 @@ const Import = () => {
   };
 
   const handleLabelChange = (colIndex, value) => {
-    setColumnLabels((prevLabels) => ({
-      ...prevLabels,
-      [colIndex]: value,
-    }));
+    setColumnLabels((prevLabels) => {
+      // Create a new copy of the labels
+      const newLabels = { ...prevLabels };
+      // Find the key of the column that has the same label
+      const existingKey = Object.keys(newLabels).find(
+        (key) => newLabels[key] === value
+      );
+
+      // If the label is already assigned to another column, clear it
+      if (existingKey !== undefined) {
+        newLabels[existingKey] = "";
+      }
+
+      // Set the new label for the current column
+      newLabels[colIndex] = value;
+
+      return newLabels;
+    });
   };
 
   const handleDelimiterChange = (type) => (checked) => {
@@ -126,6 +170,48 @@ const Import = () => {
       ...prev,
       [type]: checked,
     }));
+  };
+
+  const handleFormatSelect = async (formatId) => {
+    setSelectedFormat(formatId);
+    console.log("yuh");
+    const selectedFormat = formats.find((format) => format.id === formatId);
+    if (selectedFormat) {
+      // Set delimiters
+      setDelimiters({
+        comma: selectedFormat.comma,
+        semicolon: selectedFormat.semicolon,
+        tab: selectedFormat.tab,
+        space: selectedFormat.space,
+      });
+
+      // Set other settings
+      setSkipLines(selectedFormat.skip);
+      setLinesToSkip(selectedFormat.skipNumber);
+      setMergeLines(selectedFormat.mergeLines);
+      const selectedInstrument = instruments.find(
+        (instrument) => instrument.id === selectedFormat.instrument
+      );
+      if (selectedInstrument) {
+        setSelectedInstrument(selectedInstrument.id);
+      }
+
+      const selectedTimeframe = timeframes.find(
+        (timeframe) => timeframe.id === selectedFormat.timeframe
+      );
+      if (selectedTimeframe) {
+        setSelectedTimeframe(selectedTimeframe.id);
+      }
+
+      // Set columns based on format
+      console.log("yer");
+      setColumnLabels(
+        selectedFormat.columns.reduce((acc, label, index) => {
+          acc[index] = label;
+          return acc;
+        }, {})
+      );
+    }
   };
 
   if (userStatus === "loading" || instrumentsStatus === "loading") {
@@ -154,12 +240,12 @@ const Import = () => {
               placeholder="Enter strategy name..."
               className="w-[20rem] border-muted-foreground"
             />
-            <Button variant={"teal"} className="w-44 bg-blue-600">
-              Import
+            <Button variant={"teal"} className="w-44 bg-blue-600" onClick={() => console.log(selectedInstrument)}>
+              Import/Log
             </Button>
           </div>
           <div className="flex flex-row gap-3 mb-3">
-            <Select>
+            <Select value={selectedInstrument} onValueChange={(value) => setSelectedInstrument(value)}>
               <SelectTrigger className="w-[14rem] mr-5">
                 <SelectValue placeholder="Instruments" />
               </SelectTrigger>
@@ -169,17 +255,17 @@ const Import = () => {
                   <SelectItem value="ex1">Example 1</SelectItem>
                   <SelectItem value="ex2">Example 2</SelectItem>
                   <SelectItem value="ex3">Example 3</SelectItem>
-                  <SelectSeparator/>
+                  <SelectSeparator />
                   <SelectLabel>Custom</SelectLabel>
                   {instruments.map((instrument) => (
-                    <SelectItem key={instrument.id} value={instrument.name}>
+                    <SelectItem key={instrument.id} value={instrument.id}>
                       {instrument.name} - {instrument.symbol}
                     </SelectItem>
                   ))}
                 </SelectGroup>
               </SelectContent>
             </Select>
-            <Select>
+            <Select value={selectedTimeframe} onValueChange={(value) => setSelectedTimeframe(value)}>
               <SelectTrigger className="w-[14rem]">
                 <SelectValue placeholder="Timeframes" />
               </SelectTrigger>
@@ -192,30 +278,38 @@ const Import = () => {
                   <SelectItem value="Quarterly">Quarterly</SelectItem>
                   <SelectItem value="YTD">Year-to-Date (YTD)</SelectItem>
                   <SelectItem value="Annual">Annual</SelectItem>
-                  <SelectSeparator/>
+                  <SelectSeparator />
                   <SelectLabel>Custom</SelectLabel>
-                  {instruments.map((instrument) => (
-                    <SelectItem key={instrument.id} value={instrument.name}>
-                      {instrument.name} - {instrument.symbol}
+                  {timeframes.map((timeframe) => (
+                    <SelectItem key={timeframe.id} value={timeframe.id}>
+                      {timeframe.value} {timeframe.unit}
                     </SelectItem>
                   ))}
                 </SelectGroup>
               </SelectContent>
             </Select>
-            <Select>
+            <Select value={selectedFormat} onValueChange={(value) => handleFormatSelect(value)}>
               <SelectTrigger className="w-[180px] ml-auto">
                 <SelectValue placeholder="Select a Format" />
               </SelectTrigger>
               <SelectContent>
                 <SelectGroup>
                   <SelectLabel>Saved Formats</SelectLabel>
-                  <SelectItem value="Robinhood">Robinhood</SelectItem>
-                  <SelectItem value="Fidelity">Fidelity</SelectItem>
-                  <SelectItem value="E*Trade">E*Trade</SelectItem>
+                  {formats.map((format) => (
+                    <SelectItem key={format.id} value={format.id}>
+                      {format.name}
+                    </SelectItem>
+                  ))}
+                  <SelectItem>Ok</SelectItem>
                 </SelectGroup>
               </SelectContent>
             </Select>
-            <Button className="" size="sm" variant={"secondary"}>
+            <Button
+              onClick={() => setSaveFormatOpen(true)}
+              className=""
+              size="sm"
+              variant={"secondary"}
+            >
               Save Format
             </Button>
             <Button size={"sm"} variant={"outline"}>
@@ -369,12 +463,44 @@ const Import = () => {
           </div>
           <div className="flex flex-row gap-3">
             <div className="flex flex-row items-start">
-              <Checkbox id="merge" className="mr-2" />
+              <Checkbox
+                id="merge"
+                className="mr-2"
+                checked={mergeLines}
+                onCheckedChange={(checked) => setMergeLines(checked)}
+              />
               <Label htmlFor="merge">Merge lines two at a time</Label>
             </div>
           </div>
         </>
       )}
+
+      <Dialog open={isSaveFormatOpen} onOpenChange={setSaveFormatOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Save Format</DialogTitle>
+            <DialogDescription>
+              Are you sure you want to save these import settings?
+            </DialogDescription>
+          </DialogHeader>
+          <div>
+            <Input placeholder="Enter Format Name..." />
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setSaveFormatOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+            // variant="destructive"
+            // onClick={handleDeleteStrategy}
+            // disabled={isDeleting}
+            >
+              {/* {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} */}
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
