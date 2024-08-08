@@ -33,14 +33,23 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { LoadingSpinner } from "@/components/ui/spinner";
 import { Button } from "@/components/ui/button";
-import { query, collection, where } from "firebase/firestore";
+import {
+  query,
+  collection,
+  where,
+  addDoc,
+  deleteDoc,
+  doc,
+} from "firebase/firestore";
 import { useFirestore, useFirestoreCollectionData, useUser } from "reactfire";
+import { toast } from "@/components/ui/use-toast";
 
 const Import = () => {
   const [data, setData] = useState([]);
-  const [columns, setColumns] = useState([]);
+  const [NoOfColumns, setNoOfColumns] = useState(null);
   const [columnLabels, setColumnLabels] = useState({});
   const [linesToSkip, setLinesToSkip] = useState(1);
+  const [skipLimit, setSkipLimit] = useState(1);
   const [skipLines, setSkipLines] = useState(false);
   const [fileContent, setFileContent] = useState("");
   const [delimiters, setDelimiters] = useState({
@@ -55,6 +64,8 @@ const Import = () => {
   const [selectedInstrument, setSelectedInstrument] = useState(null);
   const [selectedTimeframe, setSelectedTimeframe] = useState(null);
   const [selectedFormat, setSelectedFormat] = useState(null);
+  const [formatName, setFormatName] = useState("");
+  const [isClearingFormat, setisClearingFormat] = useState(false);
 
   // Fetch the instruments data
   const { data: user, status: userStatus } = useUser();
@@ -109,6 +120,7 @@ const Import = () => {
 
         // Normalize content based on the selected delimiters
         const parsedData = parseWithDelimiters(fileContent, delimiters);
+        setSkipLimit(parsedData.length - 1);
 
         // Skip lines if needed
         const filteredData = skipLines
@@ -116,14 +128,11 @@ const Import = () => {
           : parsedData;
 
         setData(filteredData);
-        const headers = filteredData[linesToSkip] || [];
-        const headerLabels = headers.map((_, index) => `Column ${index + 1}`);
-        setColumns(headerLabels);
-        const initialLabels = headerLabels.reduce((acc, _, index) => {
-          acc[index] = "";
-          return acc;
-        }, {});
-        setColumnLabels(initialLabels);
+        // Skip lines if needed
+        const headers = skipLines ? filteredData[linesToSkip] : filteredData[0];
+        // console.log("headers - " + headers.length);
+        setNoOfColumns(headers.length);
+        // console.log("labels - " + JSON.stringify(columnLabels));
       } catch (error) {
         console.error("Processing error:", error.message);
       } finally {
@@ -174,7 +183,6 @@ const Import = () => {
 
   const handleFormatSelect = async (formatId) => {
     setSelectedFormat(formatId);
-    console.log("yuh");
     const selectedFormat = formats.find((format) => format.id === formatId);
     if (selectedFormat) {
       // Set delimiters
@@ -204,7 +212,6 @@ const Import = () => {
       }
 
       // Set columns based on format
-      console.log("yer");
       setColumnLabels(
         selectedFormat.columns.reduce((acc, label, index) => {
           acc[index] = label;
@@ -213,6 +220,54 @@ const Import = () => {
       );
     }
   };
+
+  const saveFormat = async () => {
+    if (!formatName) return; // Don't save without a name
+
+    // Initialize columns array with placeholders for each possible index
+    const columnsArray = [];
+    for (let i = 0; i < NoOfColumns; i++) {
+        columnsArray[i] = columnLabels[i] || ""; // Add empty string for missing columns
+    }
+
+    const newFormat = {
+      name: formatName,
+      userId: user.uid,
+      columns: columnsArray,
+      comma: delimiters.comma,
+      semicolon: delimiters.semicolon,
+      tab: delimiters.tab,
+      space: delimiters.space,
+      skip: skipLines,
+      skipNumber: linesToSkip,
+      mergeLines: mergeLines,
+      instrument: selectedInstrument,
+      timeframe: selectedTimeframe,
+    };
+    const docRef = await addDoc(collection(firestore, "formats"), newFormat);
+    setSelectedFormat(docRef.id);
+    setSaveFormatOpen(false); // Close dialog after saving
+    setFormatName("");
+  };
+
+  const clearFormat = async () => {
+    if (!selectedFormat) return; // No format selected
+    try {
+      setisClearingFormat(true);
+      console.log(selectedFormat);
+      await deleteDoc(doc(firestore, "formats", selectedFormat));
+      // Optionally reset the selected format and other states
+      setSelectedFormat(null);
+      setisClearingFormat(false);
+    } catch (error) {
+      console.error("Error deleting format:", error.message);
+    }
+  };
+
+  const handleImport = async () => {
+    console.log(columnLabels);
+    console.log(data);
+  }
 
   if (userStatus === "loading" || instrumentsStatus === "loading") {
     return (
@@ -240,12 +295,19 @@ const Import = () => {
               placeholder="Enter strategy name..."
               className="w-[20rem] border-muted-foreground"
             />
-            <Button variant={"teal"} className="w-44 bg-blue-600" onClick={() => console.log(selectedInstrument)}>
+            <Button
+              variant={"teal"}
+              className="w-44 bg-blue-600"
+              onClick={handleImport}
+            >
               Import/Log
             </Button>
           </div>
           <div className="flex flex-row gap-3 mb-3">
-            <Select value={selectedInstrument} onValueChange={(value) => setSelectedInstrument(value)}>
+            <Select
+              value={selectedInstrument}
+              onValueChange={(value) => setSelectedInstrument(value)}
+            >
               <SelectTrigger className="w-[14rem] mr-5">
                 <SelectValue placeholder="Instruments" />
               </SelectTrigger>
@@ -265,7 +327,10 @@ const Import = () => {
                 </SelectGroup>
               </SelectContent>
             </Select>
-            <Select value={selectedTimeframe} onValueChange={(value) => setSelectedTimeframe(value)}>
+            <Select
+              value={selectedTimeframe}
+              onValueChange={(value) => setSelectedTimeframe(value)}
+            >
               <SelectTrigger className="w-[14rem]">
                 <SelectValue placeholder="Timeframes" />
               </SelectTrigger>
@@ -288,7 +353,10 @@ const Import = () => {
                 </SelectGroup>
               </SelectContent>
             </Select>
-            <Select value={selectedFormat} onValueChange={(value) => handleFormatSelect(value)}>
+            <Select
+              value={selectedFormat}
+              onValueChange={(value) => handleFormatSelect(value)}
+            >
               <SelectTrigger className="w-[180px] ml-auto">
                 <SelectValue placeholder="Select a Format" />
               </SelectTrigger>
@@ -300,7 +368,6 @@ const Import = () => {
                       {format.name}
                     </SelectItem>
                   ))}
-                  <SelectItem>Ok</SelectItem>
                 </SelectGroup>
               </SelectContent>
             </Select>
@@ -312,7 +379,12 @@ const Import = () => {
             >
               Save Format
             </Button>
-            <Button size={"sm"} variant={"outline"}>
+            <Button
+              size={"sm"}
+              variant={"outline"}
+              onClick={clearFormat}
+              disabled={!selectedFormat || isClearingFormat}
+            >
               Clear Format
             </Button>
           </div>
@@ -321,7 +393,7 @@ const Import = () => {
               <TableHeader>
                 <TableRow>
                   <TableHead>Line</TableHead>
-                  {columns.map((header, index) => (
+                  {Array.from({ length: NoOfColumns }).map((_, index) => (
                     <TableHead key={index}>
                       <div className="flex items-center">
                         <Select
@@ -376,8 +448,8 @@ const Import = () => {
                 {data.map((row, rowIndex) => (
                   <TableRow key={rowIndex}>
                     <TableCell>{rowIndex + 1}</TableCell>
-                    {row.map((cell, colIndex) => (
-                      <TableCell key={colIndex}>{cell}</TableCell>
+                    {Array.from({ length: NoOfColumns }).map((_, colIndex) => (
+                      <TableCell key={colIndex}>{row[colIndex]}</TableCell>
                     ))}
                   </TableRow>
                 ))}
@@ -398,9 +470,15 @@ const Import = () => {
                   <Input
                     type="number"
                     value={linesToSkip}
-                    onChange={(e) =>
-                      setLinesToSkip(parseInt(e.target.value, 10))
-                    }
+                    onChange={(e) => {
+                      const newValue = parseInt(e.target.value, 10);
+                      // Ensure the new value does not exceed SkipLimit
+                      if (newValue <= skipLimit) {
+                        setLinesToSkip(newValue);
+                      } else {
+                        setLinesToSkip(skipLimit);
+                      }
+                    }}
                     className="w-16 h-8"
                     min="0"
                     // disabled={!skipLines}
@@ -484,16 +562,20 @@ const Import = () => {
             </DialogDescription>
           </DialogHeader>
           <div>
-            <Input placeholder="Enter Format Name..." />
+            <Input
+              value={formatName}
+              onChange={(e) => setFormatName(e.target.value)}
+              placeholder="Enter Format Name..."
+            />
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSaveFormatOpen(false)}>
               Cancel
             </Button>
             <Button
-            // variant="destructive"
-            // onClick={handleDeleteStrategy}
-            // disabled={isDeleting}
+              // variant="destructive"
+              onClick={saveFormat}
+              disabled={!formatName}
             >
               {/* {isDeleting && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} */}
               Save

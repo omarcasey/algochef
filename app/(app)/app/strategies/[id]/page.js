@@ -17,6 +17,7 @@ import {
 } from "reactfire";
 import { collection, doc, query, where } from "firebase/firestore";
 import { LoadingSpinner } from "@/components/ui/spinner";
+import PerformanceSummaryReport from '@/components/App/performanceSummaryReport';
 
 const StrategyPage = () => {
   const { id: strategyId } = useParams();
@@ -35,42 +36,42 @@ const StrategyPage = () => {
   console.log(strategy);
   console.log(strategyStatus);
 
-  //   const sidebarOptions = [
-  //     {
-  //       name: "Summary",
-  //       icon: <FaChartBar />,
-  //       component: <PerformanceSummaryReport data={strategy} />,
-  //     },
-  //     {
-  //       name: "Equity Graphs",
-  //       icon: <FaRegChartBar />,
-  //       component: <EquityGraphs data={strategy} />,
-  //     },
-  //     {
-  //       name: "Annual Returns",
-  //       icon: <FaChartLine />,
-  //       component: <AnnualReturns data={strategy} period="annual" />,
-  //     },
-  //     {
-  //       name: "Monthly Returns",
-  //       icon: <FaChartLine />,
-  //       component: <AnnualReturns data={strategy} period="monthly" />,
-  //     },
-  //     {
-  //       name: "Weekly Returns",
-  //       icon: <FaChartLine />,
-  //       component: <AnnualReturns data={strategy} period="weekly" />,
-  //     },
-  //     {
-  //       name: "Daily Returns",
-  //       icon: <FaChartLine />,
-  //       component: <AnnualReturns data={strategy} period="daily" />,
-  //     },
-  //   ];
+    const sidebarOptions = [
+      {
+        name: "Summary",
+        icon: <FaChartBar />,
+        component: <PerformanceSummaryReport data={strategy} />,
+      },
+      // {
+      //   name: "Equity Graphs",
+      //   icon: <FaRegChartBar />,
+      //   component: <EquityGraphs data={strategy} />,
+      // },
+      // {
+      //   name: "Annual Returns",
+      //   icon: <FaChartLine />,
+      //   component: <AnnualReturns data={strategy} period="annual" />,
+      // },
+      // {
+      //   name: "Monthly Returns",
+      //   icon: <FaChartLine />,
+      //   component: <AnnualReturns data={strategy} period="monthly" />,
+      // },
+      // {
+      //   name: "Weekly Returns",
+      //   icon: <FaChartLine />,
+      //   component: <AnnualReturns data={strategy} period="weekly" />,
+      // },
+      // {
+      //   name: "Daily Returns",
+      //   icon: <FaChartLine />,
+      //   component: <AnnualReturns data={strategy} period="daily" />,
+      // },
+    ];
 
-  //   const activeOption = sidebarOptions.find(
-  //     (option) => option.name === activeComponent
-  //   );
+    const activeOption = sidebarOptions.find(
+      (option) => option.name === activeComponent
+    );
 
   if (status === "loading" || strategyStatus === "loading") {
     return (
@@ -89,14 +90,14 @@ const StrategyPage = () => {
   }
 
   return (
-    <>
-      <div className="h-9 border-b border-[#262626] flex items-center">
-        <h5 className="pl-6 mb-0">Strategies - {strategy && strategy.name}</h5>
+    <div className="w-full flex flex-col">
+      <div className="h-9 border-b border-[#262626] flex items-center mb-3">
+        <h5 className="px-6 mb-0">Strategies - {strategy && strategy.name}</h5>
       </div>
-      {/* <div className="flex m-5 rounded-xl border border-[#262626]">
+      <div className="flex rounded-xl border border-[#262626]">
         <div className="w-52 text-white fixed top-32 h-screen">
           <ul>
-            <Link href="/strategies">
+            <Link href="/app/strategies">
               <li className="flex items-center p-2 pl-4 mt-4 hover:bg-gray-800 rounded-lg cursor-pointer transition-all text-blue-600">
                 <FaArrowLeft />{" "}
                 <p className="pl-3 font-semibold">Back To Strategies</p>
@@ -122,8 +123,8 @@ const StrategyPage = () => {
         <div className="flex-grow p-4 ml-52 ">
           {activeOption && activeOption.component}
         </div>
-      </div> */}
-    </>
+      </div>
+    </div>
   );
 };
 
