@@ -42,7 +42,7 @@ import {
   doc,
 } from "firebase/firestore";
 import { useFirestore, useFirestoreCollectionData, useUser } from "reactfire";
-import { toast } from "@/components/ui/use-toast";
+import { useToast } from "@/components/ui/use-toast";
 
 const Import = () => {
   const [data, setData] = useState([]);
@@ -66,6 +66,7 @@ const Import = () => {
   const [selectedFormat, setSelectedFormat] = useState(null);
   const [formatName, setFormatName] = useState("");
   const [isClearingFormat, setisClearingFormat] = useState(false);
+  const { toast } = useToast();
 
   // Fetch the instruments data
   const { data: user, status: userStatus } = useUser();
@@ -227,7 +228,7 @@ const Import = () => {
     // Initialize columns array with placeholders for each possible index
     const columnsArray = [];
     for (let i = 0; i < NoOfColumns; i++) {
-        columnsArray[i] = columnLabels[i] || ""; // Add empty string for missing columns
+      columnsArray[i] = columnLabels[i] || ""; // Add empty string for missing columns
     }
 
     const newFormat = {
@@ -265,9 +266,40 @@ const Import = () => {
   };
 
   const handleImport = async () => {
-    console.log(columnLabels);
-    console.log(data);
-  }
+    try {
+      // Ensure that at least one of the required labels is present
+      const hasRequiredLabels =
+        (Object.values(columnLabels).includes("Entry Price") &&
+        Object.values(columnLabels).includes("Exit Price")) ||
+        Object.values(columnLabels).includes("P/L");
+
+      if (!hasRequiredLabels) {
+        toast({
+          variant: "destructive",
+          title: "Uh oh! Something went wrong.",
+          description:
+            "Error: The file must contain 'Entry Price', 'Exit Price', or 'P/L' columns.",
+        });
+        return;
+      }
+
+      // Assuming you want to process the data for import
+      // For example, logging the data or performing any actions with it
+      console.log("Importing data with labels:", columnLabels);
+      console.log("Data to import:", data);
+
+      toast({
+        title: "Data imported successfully!",
+      });
+    } catch (error) {
+      console.error("Import error:", error.message);
+      toast({
+        variant: "destructive",
+        title: "Uh oh! Something went wrong.",
+        description: "Error importing data.",
+      });
+    }
+  };
 
   if (userStatus === "loading" || instrumentsStatus === "loading") {
     return (
