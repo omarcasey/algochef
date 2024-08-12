@@ -189,7 +189,7 @@ const UserStrategies = () => {
                   <TableCell>{strategy.name}</TableCell>
                   <TableCell>
                     <Link
-                      href={`/app/strategies/${strategy.id}`}
+                      href={`/app/strategies/${strategy.id}/summary`}
                       onClick={(e) => e.stopPropagation()}
                       className="flex w-min"
                     >
@@ -228,7 +228,7 @@ const UserStrategies = () => {
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           onClick={() =>
-                            router.push(`/app/strategies/${strategy.id}`)
+                            router.push(`/app/strategies/${strategy.id}/summary`)
                           }
                         >
                           View report
