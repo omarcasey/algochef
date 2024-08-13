@@ -1,8 +1,15 @@
+"use client"
 import React from 'react'
+import { useStrategy } from "../layout";
+import PeriodicalReturns from "@/components/App/PeriodicalReturns";
 
 const Annual = () => {
+  const { strategy } = useStrategy();
+
   return (
-    <div>Annual</div>
+    <div>
+      <PeriodicalReturns data={strategy} period="annual" />
+    </div>
   )
 }
 

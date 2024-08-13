@@ -10,6 +10,7 @@ import {
   Timestamp,
   doc,
   deleteDoc,
+  updateDoc,
 } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -55,8 +56,11 @@ const UserStrategies = () => {
   const [selectAll, setSelectAll] = useState(false);
   const [filter, setFilter] = useState("");
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [strategyToDelete, setStrategyToDelete] = useState(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedName, setEditedName] = useState(""); // New state for edited name
 
   const [isGenerateDialogOpen, setIsGenerateDialogOpen] = useState(false);
 
@@ -106,6 +110,18 @@ const UserStrategies = () => {
       setStrategyToDelete(null);
     }
     setIsDeleting(false);
+  };
+
+  const handleEditStrategy = async () => {
+    setIsEditing(true);
+    if (strategyToDelete && editedName) {
+      const strategyDoc = doc(firestore, "strategies", strategyToDelete);
+      await updateDoc(strategyDoc, { name: editedName });
+      setIsEditDialogOpen(false);
+      setStrategyToDelete(null);
+      setEditedName(""); // Clear the edited name state
+    }
+    setIsEditing(false);
   };
 
   if (status === "loading" || strategiesStatus === "loading") {
@@ -207,10 +223,7 @@ const UserStrategies = () => {
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
-                        <Button
-                          variant="ghost"
-                          className="h-8 w-8 p-0"
-                        >
+                        <Button variant="ghost" className="h-8 w-8 p-0">
                           <span className="sr-only">Open menu</span>
                           <MoreHorizontal className="h-4 w-4" />
                         </Button>
@@ -228,13 +241,26 @@ const UserStrategies = () => {
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           onClick={() =>
-                            router.push(`/app/strategies/${strategy.id}/summary`)
+                            router.push(
+                              `/app/strategies/${strategy.id}/summary`
+                            )
                           }
                         >
                           View report
                         </DropdownMenuItem>
                         <DropdownMenuItem
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setStrategyToDelete(strategy.id);
+                            setEditedName(strategy.name)
+                            setIsEditDialogOpen(true);
+                          }}
+                        >
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setStrategyToDelete(strategy.id);
                             setIsDeleteDialogOpen(true);
                           }}
@@ -259,9 +285,45 @@ const UserStrategies = () => {
           </TableBody>
         </Table>
       </div>
-      <div className="flex items-center justify-end space-x-2 py-4">
-        {/* Pagination controls if needed */}
-      </div>
+
+      {/* Edit Strategy Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Strategy</DialogTitle>
+            <DialogDescription>
+              Update the name of the strategy.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mb-4">
+            <Input
+              value={editedName}
+              onChange={(e) => setEditedName(e.target.value)}
+              placeholder="Strategy Name"
+            />
+          </div>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => setIsEditDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button
+              type="button"
+              onClick={handleEditStrategy}
+              disabled={isEditing}
+            >
+              {isEditing ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                "Save"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <DialogContent>
