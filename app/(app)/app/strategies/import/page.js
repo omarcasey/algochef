@@ -43,6 +43,7 @@ import {
 } from "firebase/firestore";
 import { useFirestore, useFirestoreCollectionData, useUser } from "reactfire";
 import { useToast } from "@/components/ui/use-toast";
+import { processData } from "@/components/processing/dataProcessing";
 
 const Import = () => {
   const [data, setData] = useState([]);
@@ -270,7 +271,7 @@ const Import = () => {
       // Ensure that at least one of the required labels is present
       const hasRequiredLabels =
         (Object.values(columnLabels).includes("Entry Price") &&
-        Object.values(columnLabels).includes("Exit Price")) ||
+          Object.values(columnLabels).includes("Exit Price")) ||
         Object.values(columnLabels).includes("P/L");
 
       if (!hasRequiredLabels) {
@@ -287,6 +288,9 @@ const Import = () => {
       // For example, logging the data or performing any actions with it
       console.log("Importing data with labels:", columnLabels);
       console.log("Data to import:", data);
+
+      const result = processData(columnLabels, data);
+      console.log(result);
 
       toast({
         title: "Data imported successfully!",

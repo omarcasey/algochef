@@ -132,7 +132,7 @@ export default function StrategyLayout({ children }: { children: ReactNode }) {
             variant={"ghost"}
             size={"sm"}
             className="w-full flex items-center justify-start"
-            onClick={() => router.push("/app/settings/financial/instruments")}
+            onClick={() => router.push("equityGraphs")}
           >
             <p className={`font-normal`}>Equity Graphs</p>
           </Button>
@@ -140,7 +140,7 @@ export default function StrategyLayout({ children }: { children: ReactNode }) {
             variant={"ghost"}
             size={"sm"}
             className="w-full flex items-center justify-start"
-            onClick={() => router.push("/app/settings/financial/instruments")}
+            onClick={() => router.push("")}
           >
             <p className={`font-normal`}>Drawdown Graphs</p>
           </Button>
@@ -153,7 +153,7 @@ export default function StrategyLayout({ children }: { children: ReactNode }) {
             variant={"ghost"}
             size={"sm"}
             className="w-full flex items-center justify-start"
-            onClick={() => router.push("/app/settings/financial/instruments")}
+            onClick={() => router.push("")}
           >
             <p className={`font-normal`}>Market Performance</p>
           </Button>
@@ -166,7 +166,7 @@ export default function StrategyLayout({ children }: { children: ReactNode }) {
             variant={"ghost"}
             size={"sm"}
             className="w-full flex items-center justify-start"
-            onClick={() => router.push("/app/settings/financial/instruments")}
+            onClick={() => router.push("")}
           >
             <p className={`font-normal`}>Markets Matrix</p>
           </Button>
@@ -174,7 +174,7 @@ export default function StrategyLayout({ children }: { children: ReactNode }) {
             variant={"ghost"}
             size={"sm"}
             className="w-full flex items-center justify-start"
-            onClick={() => router.push("/app/settings/financial/instruments")}
+            onClick={() => router.push("")}
           >
             <p className={`font-normal`}>Strategies Matrix</p>
           </Button>
@@ -182,7 +182,7 @@ export default function StrategyLayout({ children }: { children: ReactNode }) {
             variant={"ghost"}
             size={"sm"}
             className="w-full flex items-center justify-start"
-            onClick={() => router.push("/app/settings/financial/instruments")}
+            onClick={() => router.push("")}
           >
             <p className={`font-normal`}>Negative Matrix</p>
           </Button>
@@ -190,7 +190,7 @@ export default function StrategyLayout({ children }: { children: ReactNode }) {
             variant={"ghost"}
             size={"sm"}
             className="w-full flex items-center justify-start"
-            onClick={() => router.push("/app/settings/financial/instruments")}
+            onClick={() => router.push("")}
           >
             <p className={`font-normal`}>Positive Matrix</p>
           </Button>
@@ -198,7 +198,7 @@ export default function StrategyLayout({ children }: { children: ReactNode }) {
             variant={"ghost"}
             size={"sm"}
             className="w-full flex items-center justify-start"
-            onClick={() => router.push("/app/settings/financial/instruments")}
+            onClick={() => router.push("")}
           >
             <p className={`font-normal`}>DD Matrix</p>
           </Button>
@@ -211,7 +211,7 @@ export default function StrategyLayout({ children }: { children: ReactNode }) {
             variant={"ghost"}
             size={"sm"}
             className="w-full flex items-center justify-start"
-            onClick={() => router.push("/app/settings/financial/instruments")}
+            onClick={() => router.push("")}
           >
             <p className={`font-normal`}>Trade List</p>
           </Button>
@@ -224,7 +224,7 @@ export default function StrategyLayout({ children }: { children: ReactNode }) {
             variant={"ghost"}
             size={"sm"}
             className="w-full flex items-center justify-start"
-            onClick={() => router.push("/app/settings/financial/instruments")}
+            onClick={() => router.push("")}
           >
             <p className={`font-normal`}>Portfolio Settings</p>
           </Button>

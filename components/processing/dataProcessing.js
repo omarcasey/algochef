@@ -2,7 +2,7 @@ import Decimal from 'decimal.js';
 import { mean, std } from 'mathjs';
 
 export const processData = (columnLabels, data) => {
-    const columns = columnLabels;
+    const columns = Object.values(columnLabels);
     const rows = data;
 
     if (!rows.length) {
