@@ -1,11 +1,12 @@
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-  } from "@/components/ui/table";
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { ScrollArea } from "../ui/scroll-area";
 
 const PeriodicalReturns = ({ data, period }) => {
   let returnsData = data.annualReturns;
@@ -22,18 +23,18 @@ const PeriodicalReturns = ({ data, period }) => {
   returnsData = returnsData.slice().reverse();
 
   return (
-    <div className="flex items-center justify-center pt-10 w-full">
-      <div className="rounded-md border">
-        <Table>
-          <TableHeader>
+    <div className="p-4">
+
+        <Table wrapperClassName="overflow-clip rounded-md border">
+          <TableHeader className="sticky top-0 bg-background z-10 rounded-md bg-neutral-800">
             <TableRow>
-              <TableHead>Period</TableHead>
+              <TableHead className="rounded-tl-md">Period</TableHead>
               <TableHead>Net Profit</TableHead>
               <TableHead>Return on IE</TableHead>
               <TableHead>Return on TE</TableHead>
               <TableHead># of Trades</TableHead>
               <TableHead>Profit Factor</TableHead>
-              <TableHead>% Profitable</TableHead>
+              <TableHead className="rounded-tr-md">% Profitable</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -75,7 +76,7 @@ const PeriodicalReturns = ({ data, period }) => {
               ))}
           </TableBody>
         </Table>
-      </div>
+
     </div>
   );
 };

@@ -103,7 +103,7 @@ export default function StrategyLayout({ children }: { children: ReactNode }) {
             variant={"ghost"}
             size={"sm"}
             className="w-full flex items-center justify-start"
-            onClick={() => router.push("/app/settings/financial/instruments")}
+            onClick={() => router.push("monthlyReturns")}
           >
             <p className={`font-normal`}>Monthly</p>
           </Button>
@@ -111,7 +111,7 @@ export default function StrategyLayout({ children }: { children: ReactNode }) {
             variant={"ghost"}
             size={"sm"}
             className="w-full flex items-center justify-start"
-            onClick={() => router.push("/app/settings/financial/instruments")}
+            onClick={() => router.push("weeklyReturns")}
           >
             <p className={`font-normal`}>Weekly</p>
           </Button>
@@ -119,7 +119,7 @@ export default function StrategyLayout({ children }: { children: ReactNode }) {
             variant={"ghost"}
             size={"sm"}
             className="w-full flex items-center justify-start"
-            onClick={() => router.push("/app/settings/financial/instruments")}
+            onClick={() => router.push("dailyReturns")}
           >
             <p className={`font-normal`}>Daily</p>
           </Button>
@@ -229,7 +229,7 @@ export default function StrategyLayout({ children }: { children: ReactNode }) {
             <p className={`font-normal`}>Portfolio Settings</p>
           </Button>
         </div>
-        <ScrollArea className="flex-1 border rounded-md">{children}</ScrollArea>
+        <ScrollArea className="flex-1 border rounded-md ">{children}</ScrollArea>
       </div>
     </StrategyProvider>
   );
