@@ -317,6 +317,8 @@ const Import = () => {
         monthlyReturns: monthlyReturns,
         weeklyReturns: weeklyReturns,
         dailyReturns: dailyReturns,
+        columnLabels: columnLabels,
+        data: data.map((row, index) => ({ row })),
         // include any other relevant fields here
       });
 
