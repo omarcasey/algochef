@@ -60,7 +60,6 @@ export const processData = (columnLabels, data) => {
     const size = sizeIndex !== -1 ? parseInt(row[sizeIndex]) : 1;
 
     const profit = (exitPrice - entryPrice) * size;
-    console.log(profit);
 
     totalTrades++;
 
@@ -255,7 +254,7 @@ export const processData = (columnLabels, data) => {
   return { equityCurveData, metrics };
 };
 
-export const processData2 = (content, initialEquity, period) => {
+export const processData2 = (columnLabels, data, initialEquity, period) => {
   const columns = Object.values(columnLabels);
   const rows = data;
 

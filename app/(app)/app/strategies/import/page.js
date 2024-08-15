@@ -48,6 +48,7 @@ import {
   processData,
   processData2,
 } from "@/components/processing/dataProcessing";
+import { useRouter } from "next/navigation";
 
 const Import = () => {
   const [data, setData] = useState([]);
@@ -73,6 +74,7 @@ const Import = () => {
   const [strategyName, setStrategyName] = useState("");
   const [isClearingFormat, setisClearingFormat] = useState(false);
   const { toast } = useToast();
+  const router = useRouter();
 
   // Fetch the instruments data
   const { data: user, status: userStatus } = useUser();
@@ -278,16 +280,17 @@ const Import = () => {
     try {
       // Ensure that at least one of the required labels is present
       const hasRequiredLabels =
-        (Object.values(columnLabels).includes("Entry Price") &&
-          Object.values(columnLabels).includes("Exit Price")) ||
-        Object.values(columnLabels).includes("P/L");
+        Object.values(columnLabels).includes("Entry Date") &&
+        Object.values(columnLabels).includes("Entry Price") &&
+        Object.values(columnLabels).includes("Exit Date") &&
+        Object.values(columnLabels).includes("Exit Price");
 
       if (!hasRequiredLabels) {
         toast({
           variant: "destructive",
           title: "Uh oh! Something went wrong.",
           description:
-            "Error: The file must contain 'Entry Price', 'Exit Price', or 'P/L' columns.",
+            "Error: The file must contain 'Entry Date', 'Entry Price', 'Exit Date', 'Exit Price' columns.",
         });
         return;
       }
@@ -298,19 +301,13 @@ const Import = () => {
       console.log("Data to import:", data);
 
       const result = processData(columnLabels, data);
-      const annualReturns = processData2(content, 100000, "year");
-      const monthlyReturns = processData2(content, 100000, "month");
-      const weeklyReturns = processData2(content, 100000, "week");
-      const dailyReturns = processData2(content, 100000, "day");
-
-      console.log(result);
-      console.log(annualReturns);
-      console.log(monthlyReturns);
-      console.log(weeklyReturns);
-      console.log(dailyReturns);
+      const annualReturns = processData2(columnLabels, data, 100000, "year");
+      const monthlyReturns = processData2(columnLabels, data, 100000, "month");
+      const weeklyReturns = processData2(columnLabels, data, 100000, "week");
+      const dailyReturns = processData2(columnLabels, data, 100000, "day");
 
       // Add a new document with a generated ID and strategy name.
-      const strategyDoc = await addDoc(collection(db, "strategies"), {
+      const strategyDoc = await addDoc(collection(firestore, "strategies"), {
         name: strategyName,
         metrics: result.metrics,
         equityCurveData: result.equityCurveData,
@@ -328,8 +325,7 @@ const Import = () => {
       });
 
       // Redirect to strategy page
-      router.push(`/strategies/${strategyDoc.id}/summary`);
-
+      router.push(`/app/strategies/${strategyDoc.id}/summary`);
     } catch (error) {
       console.error("Import error:", error.message);
       toast({
