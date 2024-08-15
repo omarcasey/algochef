@@ -40,10 +40,14 @@ import {
   addDoc,
   deleteDoc,
   doc,
+  Timestamp,
 } from "firebase/firestore";
 import { useFirestore, useFirestoreCollectionData, useUser } from "reactfire";
 import { useToast } from "@/components/ui/use-toast";
-import { processData } from "@/components/processing/dataProcessing";
+import {
+  processData,
+  processData2,
+} from "@/components/processing/dataProcessing";
 
 const Import = () => {
   const [data, setData] = useState([]);
@@ -66,6 +70,7 @@ const Import = () => {
   const [selectedTimeframe, setSelectedTimeframe] = useState(null);
   const [selectedFormat, setSelectedFormat] = useState(null);
   const [formatName, setFormatName] = useState("");
+  const [strategyName, setStrategyName] = useState("");
   const [isClearingFormat, setisClearingFormat] = useState(false);
   const { toast } = useToast();
 
@@ -117,7 +122,10 @@ const Import = () => {
             "g"
           );
 
-          return content.split("\n").map((line) => line.split(delimiterRegex));
+          return content
+            .split("\n")
+            .map((line) => line.split(delimiterRegex))
+            .filter((row) => row.some((cell) => cell.trim() !== ""));
         };
 
         // Normalize content based on the selected delimiters
@@ -290,11 +298,38 @@ const Import = () => {
       console.log("Data to import:", data);
 
       const result = processData(columnLabels, data);
+      const annualReturns = processData2(content, 100000, "year");
+      const monthlyReturns = processData2(content, 100000, "month");
+      const weeklyReturns = processData2(content, 100000, "week");
+      const dailyReturns = processData2(content, 100000, "day");
+
       console.log(result);
+      console.log(annualReturns);
+      console.log(monthlyReturns);
+      console.log(weeklyReturns);
+      console.log(dailyReturns);
+
+      // Add a new document with a generated ID and strategy name.
+      const strategyDoc = await addDoc(collection(db, "strategies"), {
+        name: strategyName,
+        metrics: result.metrics,
+        equityCurveData: result.equityCurveData,
+        createdAt: Timestamp.now(),
+        userId: user.uid,
+        annualReturns: annualReturns,
+        monthlyReturns: monthlyReturns,
+        weeklyReturns: weeklyReturns,
+        dailyReturns: dailyReturns,
+        // include any other relevant fields here
+      });
 
       toast({
         title: "Data imported successfully!",
       });
+
+      // Redirect to strategy page
+      router.push(`/strategies/${strategyDoc.id}/summary`);
+
     } catch (error) {
       console.error("Import error:", error.message);
       toast({
@@ -328,6 +363,8 @@ const Import = () => {
         <>
           <div className="flex gap-3 mb-6 justify-center">
             <Input
+              value={strategyName}
+              onChange={(e) => setStrategyName(e.target.value)}
               placeholder="Enter strategy name..."
               className="w-[20rem] border-muted-foreground"
             />
