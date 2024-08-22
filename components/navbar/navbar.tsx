@@ -2,19 +2,20 @@ import { NavbarMobile } from "@/components/navbar/navbar-mobile";
 import { NavbarUserLinks } from "@/components/navbar/navbar-user-links";
 import { buttonVariants } from "@/components/ui/button";
 import { FishIcon, ScanTextIcon } from "lucide-react";
+import Image from "next/image";
 import Link from "next/link";
 import { FC } from "react";
 
 export const NavBar: FC = () => {
   return (
     <>
-      <div className="animate-in fade-in w-full bg-black border-b border-gray-600">
+      <div className="animate-in fade-in w-full dark:bg-black border-b border-gray-600">
         <nav className="container px-6 md:px-8 py-4">
           <div className="flex items-center">
             <Link href="/" className="hover:opacity-80 transition-opacity">
               <div className="flex items-center">
-                <FishIcon className="w-8 h-8 mr-2 inline" />{" "}
-                <span className="text-xl font-semibold tracking-tighter text-white mr-6">
+                <Image src={"/tradetrackr logo.jpg"} alt="logo" height={1920} width={1920} className="w-8 h-8 rounded-lg mr-3 inline" />{" "}
+                <span className="text-xl font-semibold tracking-tighter text-foreground mr-6">
                   TradeTrackr
                 </span>
               </div>

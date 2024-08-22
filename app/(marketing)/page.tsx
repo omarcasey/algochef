@@ -21,7 +21,7 @@ import { Footer } from "@/components/footer";
 export default function Home() {
   return (
     <div className="flex flex-col grow h-full overflow-hidden">
-      <div className="grow flex flex-col items-center justify-evenly bg-black">
+      <div className="grow flex flex-col items-center justify-evenly dark:bg-black">
         <section className="space-y-6">
           <Hero />
           <Feature2 />

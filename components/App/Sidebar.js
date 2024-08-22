@@ -32,11 +32,16 @@ import { useUser } from "reactfire";
 import { SlLogout } from "react-icons/sl";
 import { getAuth, signOut } from "firebase/auth";
 import { toast } from "../ui/use-toast";
+import { useTheme } from "next-themes";
+import { FaPaintBrush } from "react-icons/fa";
+import { FaCheckCircle } from "react-icons/fa";
 
 const Sidebar = () => {
   const [isExpanded, setIsExpanded] = useState(true);
   const router = useRouter();
   const { data } = useUser();
+  const { theme, setTheme } = useTheme();
+
   const doLogout = async () => {
     await signOut(getAuth());
     toast({
@@ -58,11 +63,15 @@ const Sidebar = () => {
     >
       <div className="w-full">
         <div className="flex flex-row justify-between items-center mb-10">
-          <Link
-            href="/"
-            className={`ml-4 text-xl font-bold  ${isExpanded ? "" : "hidden"}`}
-          >
-            TradeTrackr
+          <Link href="/" className={`ml-4 flex items-center ${isExpanded ? "" : "hidden"}`}>
+            <Image
+              src={"/tradetrackr logo.jpg"}
+              alt="logo"
+              height={1920}
+              width={1920}
+              className="w-8 h-8 rounded-lg mr-2 inline"
+            />
+            <p className="text-xl font-bold">TradeTrackr</p>
           </Link>
           <Button variant="ghost" onClick={toggleSidebar}>
             <GoSidebarCollapse />
@@ -178,7 +187,11 @@ const Sidebar = () => {
                 <>
                   <div className="flex flex-row items-center w-full flex-1">
                     <div className="flex flex-col items-start flex-1">
-                      <p>{data?.displayName || data?.email?.split('@')[0] || "User"}</p>
+                      <p>
+                        {data?.displayName ||
+                          data?.email?.split("@")[0] ||
+                          "User"}
+                      </p>
                       <p className="text-gray-400 text-xs truncate">
                         {data?.email || "No email"}
                       </p>
@@ -197,9 +210,6 @@ const Sidebar = () => {
           <DropdownMenuLabel className="font-normal">
             <div className="flex flex-col space-y-1">
               <p className="text-xs text-muted-foreground leading-none font-sans">
-                {/* {data?.displayName ||
-                data?.email?.slice(0, data?.email?.indexOf("@")) ||
-                "Anonymous"} */}
                 Signed in as
               </p>
               <p className="text-xs leading-none">
@@ -235,9 +245,47 @@ const Sidebar = () => {
             </DropdownMenuItem>
           </DropdownMenuGroup>
           <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={doLogout}>
-            <SlLogout className={`mr-2 h-3 w-3 shrink-0`} />
-            <p>Log out</p>
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <FaPaintBrush className={`mr-2.5 h-3.5 w-3.5 shrink-0`} />
+              <p>Theme</p>
+            </DropdownMenuSubTrigger>
+            <DropdownMenuPortal>
+              <DropdownMenuSubContent className="w-full ml-2">
+                <DropdownMenuItem
+                  onClick={() => setTheme("light")}
+                  className="flex justify-between"
+                >
+                  Light
+                  {theme === "light" && (
+                    <FaCheckCircle className="ml-4 h-4 w-4 text-green-500" />
+                  )}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setTheme("dark")}
+                  className="flex justify-between"
+                >
+                  Dark
+                  {theme === "dark" && (
+                    <FaCheckCircle className="ml-4 h-4 w-4 text-green-500" />
+                  )}
+                </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setTheme("system")}
+                  className="flex justify-between"
+                >
+                  System
+                  {theme === "system" && (
+                    <FaCheckCircle className="ml-4 h-4 w-4 text-green-500" />
+                  )}
+                </DropdownMenuItem>
+              </DropdownMenuSubContent>
+            </DropdownMenuPortal>
+          </DropdownMenuSub>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem className="hover:cursor-pointer" onClick={doLogout}>
+            <SlLogout className={`mr-2 h-4 w-4 shrink-0`} />
+            Log out
           </DropdownMenuItem>
         </DropdownMenuContent>
       </DropdownMenu>
