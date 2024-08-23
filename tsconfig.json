@@ -33,7 +33,7 @@
     "**/*.ts",
     "**/*.tsx",
     ".next/types/**/*.ts"
-, "app/(app)/app/strategies/[id]/page.js", "app/(app)/app/strategies/import/page.js", "app/(app)/app/strategies/import/page.js", "app/(app)/app/strategies/[id]/equityGraphs/page.js"  ],
+, "app/(app)/app/strategies/[id]/page.tsx", "app/(app)/app/strategies/import/page.js", "app/(app)/app/strategies/import/page.js", "app/(app)/app/strategies/[id]/equityGraphs/page.js"  ],
   "exclude": [
     "node_modules"
   ]

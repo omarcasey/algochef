@@ -209,14 +209,14 @@ const UserStrategies = () => {
                       onClick={(e) => e.stopPropagation()}
                       className="flex w-min"
                     >
-                      <div className="bg-green-950 text-green-400 font-medium cursor-pointer px-2 py-1.5 rounded-md text-xs w-24 flex items-center justify-center">
+                      <div className="bg-green-100 dark:bg-green-950 text-green-700 dark:text-green-400 font-medium cursor-pointer px-2 py-1.5 rounded-md text-xs w-24 flex items-center justify-center">
                         View Report
                       </div>
                     </Link>
                   </TableCell>
                   <TableCell>{formatDate(strategy.createdAt)}</TableCell>
                   <TableCell>
-                    <div className="bg-purple-950 text-purple-400 font-medium px-2 py-1.5 rounded-md text-xs w-16 flex items-center justify-center">
+                    <div className="bg-purple-200 dark:bg-purple-950 text-purple-800 dark:text-purple-400 font-medium px-2 py-1.5 rounded-md text-xs w-16 flex items-center justify-center">
                       Future
                     </div>
                   </TableCell>
@@ -387,7 +387,7 @@ const UserStrategies = () => {
                         <p className="text-orange-400">@ES.D</p>
                       </TableCell>
                       <TableCell>
-                        <div className="bg-purple-950 text-purple-400 font-medium px-2 py-1.5 rounded-md text-xs w-16 flex items-center justify-center">
+                        <div className="bg-purple-200 dark:bg-purple-950 text-purple-800 dark:text-purple-400 font-medium px-2 py-1.5 rounded-md text-xs w-16 flex items-center justify-center">
                           Future
                         </div>
                       </TableCell>

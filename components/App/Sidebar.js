@@ -16,7 +16,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Button } from "../ui/button";
 import { GoSidebarCollapse } from "react-icons/go";
-import { LuLayoutDashboard, LuUpload, LuSettings } from "react-icons/lu";
 import { FiPieChart } from "react-icons/fi";
 import { MdNotificationsActive } from "react-icons/md";
 import { IoIosPeople, IoIosSettings } from "react-icons/io";
@@ -35,6 +34,7 @@ import { toast } from "../ui/use-toast";
 import { useTheme } from "next-themes";
 import { FaPaintBrush } from "react-icons/fa";
 import { FaCheckCircle } from "react-icons/fa";
+import { Computer, Moon, Sun } from "lucide-react";
 
 const Sidebar = () => {
   const [isExpanded, setIsExpanded] = useState(true);
@@ -63,7 +63,10 @@ const Sidebar = () => {
     >
       <div className="w-full">
         <div className="flex flex-row justify-between items-center mb-10">
-          <Link href="/" className={`ml-4 flex items-center ${isExpanded ? "" : "hidden"}`}>
+          <Link
+            href="/"
+            className={`ml-4 flex items-center ${isExpanded ? "" : "hidden"}`}
+          >
             <Image
               src={"/tradetrackr logo.jpg"}
               alt="logo"
@@ -253,30 +256,39 @@ const Sidebar = () => {
             <DropdownMenuPortal>
               <DropdownMenuSubContent className="w-full ml-2">
                 <DropdownMenuItem
+                  className="flex justify-between items-center"
                   onClick={() => setTheme("light")}
-                  className="flex justify-between"
                 >
-                  Light
+                  <div className="flex flex-row items-center">
+                    <Sun className="w-3.5 h-3.5 mr-2" />
+                    <p>Light</p>
+                  </div>
                   {theme === "light" && (
-                    <FaCheckCircle className="ml-4 h-4 w-4 text-green-500" />
+                    <FaCheckCircle className="ml-4 h-4 w-4" />
                   )}
                 </DropdownMenuItem>
                 <DropdownMenuItem
+                  className="flex justify-between items-center"
                   onClick={() => setTheme("dark")}
-                  className="flex justify-between"
                 >
-                  Dark
+                  <div className="flex flex-row items-center">
+                    <Moon className="w-3.5 h-3.5 mr-2" />
+                    <p>Dark</p>
+                  </div>
                   {theme === "dark" && (
-                    <FaCheckCircle className="ml-4 h-4 w-4 text-green-500" />
+                    <FaCheckCircle className="ml-4 h-4 w-4" />
                   )}
                 </DropdownMenuItem>
                 <DropdownMenuItem
+                  className="flex justify-between items-center"
                   onClick={() => setTheme("system")}
-                  className="flex justify-between"
                 >
-                  System
+                  <div className="flex flex-row items-center">
+                    <Computer className="w-3.5 h-3.5 mr-2" />
+                    <p>System</p>
+                  </div>
                   {theme === "system" && (
-                    <FaCheckCircle className="ml-4 h-4 w-4 text-green-500" />
+                    <FaCheckCircle className="ml-4 h-4 w-4" />
                   )}
                 </DropdownMenuItem>
               </DropdownMenuSubContent>
