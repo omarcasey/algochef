@@ -26,7 +26,7 @@ export const processData = (columnLabels, data) => {
   let currentPeak = 0;
   let maxDrawdownDollar = 0;
   let maxDrawdownPercent = 0;
-  const initialCapital = 100000;
+  const initialCapital = 10000;
   let totalDays = 0;
   let totalProfitableMonths = 0;
   let previousEntryDate = null;

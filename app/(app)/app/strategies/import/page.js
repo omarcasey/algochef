@@ -327,7 +327,7 @@ const Import = () => {
       });
 
       // Redirect to strategy page
-      router.push(`/app/strategies/${strategyDoc.id}/summary`);
+      router.push(`/app/strategies/${strategyDoc.id}`);
     } catch (error) {
       console.error("Import error:", error.message);
       toast({

@@ -6,11 +6,28 @@ import { useFirestore, useFirestoreDocData, useUser } from "reactfire";
 import { doc } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { BsGraphDownArrow, BsTable } from "react-icons/bs";
+import { TfiStatsUp } from "react-icons/tfi";
+import { IoCalendarClearOutline } from "react-icons/io5";
+import { IoCalendarOutline } from "react-icons/io5";
+import { IoIosCheckboxOutline } from "react-icons/io";
+import { IoStatsChartSharp } from "react-icons/io5";
+import { IoEyeOutline } from "react-icons/io5";
 import Link from "next/link";
 import Summary from "@/components/strategyPage/performanceSummary";
 import PortfolioGrowth from "@/components/strategyPage/portfolioGrowth";
 import AnnualReturnsGraph from "@/components/strategyPage/AnnualReturnsGraph";
 import TrailingReturns from "@/components/strategyPage/TrailingReturns";
+import ActiveReturnsChart from "@/components/strategyPage/ActiveReturnsChart";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
+import AnnualReturns from "@/components/strategyPage/AnnualReturns";
+import MonthlyReturns from "@/components/strategyPage/MonthlyReturns";
+import RiskandReturnMetrics from "@/components/strategyPage/RiskandReturnMetrics";
 
 const StrategyPage = () => {
   const params = useParams<{ id: string }>();
@@ -22,10 +39,13 @@ const StrategyPage = () => {
 
   const sectionRefs = {
     summary: useRef<HTMLDivElement>(null),
-    bro2: useRef<HTMLDivElement>(null),
-    bro3: useRef<HTMLDivElement>(null),
-    bro4: useRef<HTMLDivElement>(null),
-    bro5: useRef<HTMLDivElement>(null),
+    activereturns: useRef<HTMLDivElement>(null),
+    metrics: useRef<HTMLDivElement>(null),
+    annualreturns: useRef<HTMLDivElement>(null),
+    monthlyreturns: useRef<HTMLDivElement>(null),
+    drawdowns: useRef<HTMLDivElement>(null),
+    rollingreturns: useRef<HTMLDivElement>(null),
+    trades: useRef<HTMLDivElement>(null),
   };
 
   if (!strategyId) {
@@ -59,177 +79,134 @@ const StrategyPage = () => {
   return (
     <>
       <div className="flex w-full">
-        <div className="w-64 pr-10">
+        <div className="w-56 pr-10 space-y-1">
           <p className={`ml-7 mb-3 mt-5 text-gray-400 text-xs uppercase`}>
             Portfolio Report
           </p>
           <Button
             variant={"ghost"}
-            size={"sm"}
+            size={"default"}
             className="w-full flex items-center justify-start"
             onClick={() => scrollToSection("summary")}
           >
-            <p className={`font-normal`}>Performance Summary</p>
-          </Button>
-          <p className={`ml-7 mb-3 mt-3 text-gray-400 text-xs uppercase`}>
-            Periodical Returns
-          </p>
-          <Button
-            variant={"ghost"}
-            size={"sm"}
-            className="w-full flex items-center justify-start"
-            onClick={() => router.push("annualReturns")}
-          >
-            <p className={`font-normal`}>Annual</p>
+            <IoEyeOutline size={16} className="mr-2" />
+            <p className={`font-normal`}>Summary</p>
           </Button>
           <Button
             variant={"ghost"}
-            size={"sm"}
+            size={"default"}
             className="w-full flex items-center justify-start"
-            onClick={() => router.push("monthlyReturns")}
+            onClick={() => scrollToSection("activereturns")}
           >
-            <p className={`font-normal`}>Monthly</p>
+            <IoStatsChartSharp className="mr-2" />
+            <p className={`font-normal`}>Active Returns</p>
           </Button>
           <Button
             variant={"ghost"}
-            size={"sm"}
+            size={"default"}
             className="w-full flex items-center justify-start"
-            onClick={() => router.push("weeklyReturns")}
+            onClick={() => scrollToSection("metrics")}
           >
-            <p className={`font-normal`}>Weekly</p>
+            <IoIosCheckboxOutline size={16} className="mr-2" />
+            <p className={`font-normal`}>Metrics</p>
           </Button>
           <Button
             variant={"ghost"}
-            size={"sm"}
+            size={"default"}
             className="w-full flex items-center justify-start"
-            onClick={() => router.push("dailyReturns")}
+            onClick={() => scrollToSection("annualreturns")}
           >
-            <p className={`font-normal`}>Daily</p>
-          </Button>
-          <p className={`ml-7 mb-3 mt-3 text-gray-400 text-xs uppercase`}>
-            Charts
-          </p>
-          <Button
-            variant={"ghost"}
-            size={"sm"}
-            className="w-full flex items-center justify-start"
-            onClick={() => router.push("equityGraphs")}
-          >
-            <p className={`font-normal`}>Equity Graphs</p>
+            <IoCalendarClearOutline className="mr-2" />
+            <p className={`font-normal`}>Annual Returns</p>
           </Button>
           <Button
             variant={"ghost"}
-            size={"sm"}
+            size={"default"}
             className="w-full flex items-center justify-start"
-            onClick={() => router.push("")}
+            onClick={() => scrollToSection("monthlyreturns")}
           >
+            <IoCalendarOutline className="mr-2" />
+            <p className={`font-normal`}>Monthly Returns</p>
+          </Button>
+          <Button
+            variant={"ghost"}
+            size={"default"}
+            className="w-full flex items-center justify-start"
+            onClick={() => scrollToSection("drawdowns")}
+          >
+            <BsGraphDownArrow className="mr-2" />
             <p className={`font-normal`}>Drawdown Graphs</p>
           </Button>
-          <p className={`ml-7 mb-3 mt-3 text-gray-400 text-xs uppercase`}>
-            Market
-          </p>
           <Button
             variant={"ghost"}
-            size={"sm"}
+            size={"default"}
             className="w-full flex items-center justify-start"
-            onClick={() => router.push("")}
+            onClick={() => scrollToSection("rollingreturns")}
           >
-            <p className={`font-normal`}>Market Performance</p>
-          </Button>
-          <p className={`ml-7 mb-3 mt-3 text-gray-400 text-xs uppercase`}>
-            Correlation
-          </p>
-          <Button
-            variant={"ghost"}
-            size={"sm"}
-            className="w-full flex items-center justify-start"
-            onClick={() => router.push("")}
-          >
-            <p className={`font-normal`}>Markets Matrix</p>
+            <TfiStatsUp className="mr-2" />
+            <p className={`font-normal`}>Rolling Returns</p>
           </Button>
           <Button
             variant={"ghost"}
-            size={"sm"}
+            size={"default"}
             className="w-full flex items-center justify-start"
-            onClick={() => router.push("")}
+            onClick={() => scrollToSection("trades")}
           >
-            <p className={`font-normal`}>Strategies Matrix</p>
-          </Button>
-          <Button
-            variant={"ghost"}
-            size={"sm"}
-            className="w-full flex items-center justify-start"
-            onClick={() => router.push("")}
-          >
-            <p className={`font-normal`}>Negative Matrix</p>
-          </Button>
-          <Button
-            variant={"ghost"}
-            size={"sm"}
-            className="w-full flex items-center justify-start"
-            onClick={() => router.push("")}
-          >
-            <p className={`font-normal`}>Positive Matrix</p>
-          </Button>
-          <Button
-            variant={"ghost"}
-            size={"sm"}
-            className="w-full flex items-center justify-start"
-            onClick={() => router.push("")}
-          >
-            <p className={`font-normal`}>DD Matrix</p>
-          </Button>
-          <p className={`ml-7 mb-3 mt-3 text-gray-400 text-xs uppercase`}>
-            Trades
-          </p>
-          <Button
-            variant={"ghost"}
-            size={"sm"}
-            className="w-full flex items-center justify-start"
-            onClick={() => router.push("")}
-          >
-            <p className={`font-normal`}>Trade List</p>
-          </Button>
-          <p className={`ml-7 mb-3 mt-3 text-gray-400 text-xs uppercase`}>
-            Settings
-          </p>
-          <Button
-            variant={"ghost"}
-            size={"sm"}
-            className="w-full flex items-center justify-start"
-            onClick={() => router.push("")}
-          >
-            <p className={`font-normal`}>Portfolio Settings</p>
+            <BsTable className="mr-2" />
+            <p className={`font-normal`}>Trades</p>
           </Button>
         </div>
         <ScrollArea className="flex-1 rounded-md bg-slate-50 dark:bg-black">
-            <div
-              id="summary"
-              ref={sectionRefs.summary}
-              className="p-6 space-y-8"
-            >
-              <Summary />
-              <PortfolioGrowth />
-              <AnnualReturnsGraph />
-              <TrailingReturns />
-            </div>
-            <div
-              id="bro2"
-              className="h-screen w-full flex items-center justify-center "
-            ></div>
-            <div
-              id="bro3"
-              className="h-screen w-full flex items-center justify-center "
-            ></div>
-            <div
-              ref={sectionRefs.bro4}
-              id="bro4"
-              className="h-screen w-full flex items-center justify-center bg-purple-500"
-            ></div>
-            <div
-              id="bro5"
-              className="h-screen w-full flex items-center justify-center bg-orange-500"
-            ></div>
+          <p>{strategy.name}</p>
+          <div id="summary" ref={sectionRefs.summary} className="p-6 space-y-8">
+            <Summary />
+            <PortfolioGrowth strategy={strategy} />
+            <AnnualReturnsGraph strategy={strategy} />
+            <TrailingReturns />
+          </div>
+          <div
+            id="activereturns"
+            ref={sectionRefs.activereturns}
+            className="p-6 space-y-8"
+          >
+            <ActiveReturnsChart />
+          </div>
+          <div
+            id="metrics"
+            ref={sectionRefs.metrics}
+            className="p-6 space-y-8"
+          >
+            <RiskandReturnMetrics />
+          </div>
+          <div
+            id="annualreturns"
+            ref={sectionRefs.annualreturns}
+            className="p-6 space-y-8"
+          >
+            <AnnualReturns strategy={strategy} />
+          </div>
+          <div
+            id="monthlyreturns"
+            ref={sectionRefs.monthlyreturns}
+            className="p-6 space-y-8"
+          >
+            <MonthlyReturns strategy={strategy} />
+          </div>
+          <div
+            id="drawdowns"
+            ref={sectionRefs.drawdowns}
+            className="p-6 space-y-8"
+          ></div>
+          <div
+            id="rollingreturns"
+            ref={sectionRefs.rollingreturns}
+            className="p-6 space-y-8"
+          ></div>
+          <div
+            id="trades"
+            ref={sectionRefs.trades}
+            className="p-6 space-y-8"
+          ></div>
         </ScrollArea>
       </div>
     </>
