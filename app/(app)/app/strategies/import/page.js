@@ -301,10 +301,10 @@ const Import = () => {
       console.log("Data to import:", data);
 
       const result = processData(columnLabels, data);
-      const annualReturns = processData2(columnLabels, data, 100000, "year");
-      const monthlyReturns = processData2(columnLabels, data, 100000, "month");
-      const weeklyReturns = processData2(columnLabels, data, 100000, "week");
-      const dailyReturns = processData2(columnLabels, data, 100000, "day");
+      const annualReturns = processData2(columnLabels, data, 10000, "year");
+      const monthlyReturns = processData2(columnLabels, data, 10000, "month");
+      const weeklyReturns = processData2(columnLabels, data, 10000, "week");
+      const dailyReturns = processData2(columnLabels, data, 10000, "day");
 
       // Add a new document with a generated ID and strategy name.
       const strategyDoc = await addDoc(collection(firestore, "strategies"), {

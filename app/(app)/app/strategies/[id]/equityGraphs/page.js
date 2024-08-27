@@ -1,11 +1,10 @@
 "use client";
 import React from "react";
 import ReactApexChart from "react-apexcharts";
-import { useStrategy } from "../layout";
 import { LoadingSpinner } from "@/components/ui/spinner";
 
 const EquityGraphs = () => {
-  const { strategy } = useStrategy();
+  const { strategy } = null;
   // const strategy = data;
   const equityCurveData = strategy.equityCurveData.map((point, index) => ({
     x: index,

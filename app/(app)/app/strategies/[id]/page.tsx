@@ -13,21 +13,16 @@ import { IoCalendarOutline } from "react-icons/io5";
 import { IoIosCheckboxOutline } from "react-icons/io";
 import { IoStatsChartSharp } from "react-icons/io5";
 import { IoEyeOutline } from "react-icons/io5";
-import Link from "next/link";
 import Summary from "@/components/strategyPage/performanceSummary";
 import PortfolioGrowth from "@/components/strategyPage/portfolioGrowth";
 import AnnualReturnsGraph from "@/components/strategyPage/AnnualReturnsGraph";
 import TrailingReturns from "@/components/strategyPage/TrailingReturns";
 import ActiveReturnsChart from "@/components/strategyPage/ActiveReturnsChart";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
 import AnnualReturns from "@/components/strategyPage/AnnualReturns";
 import MonthlyReturns from "@/components/strategyPage/MonthlyReturns";
 import RiskandReturnMetrics from "@/components/strategyPage/RiskandReturnMetrics";
+import Drawdowns from "@/components/strategyPage/Drawdowns";
+import TradingPerformance from "@/components/strategyPage/TradingPerformance";
 
 const StrategyPage = () => {
   const params = useParams<{ id: string }>();
@@ -159,7 +154,7 @@ const StrategyPage = () => {
         <ScrollArea className="flex-1 rounded-md bg-slate-50 dark:bg-black">
           <p>{strategy.name}</p>
           <div id="summary" ref={sectionRefs.summary} className="p-6 space-y-8">
-            <Summary />
+            <Summary strategy={strategy} />
             <PortfolioGrowth strategy={strategy} />
             <AnnualReturnsGraph strategy={strategy} />
             <TrailingReturns />
@@ -171,11 +166,7 @@ const StrategyPage = () => {
           >
             <ActiveReturnsChart />
           </div>
-          <div
-            id="metrics"
-            ref={sectionRefs.metrics}
-            className="p-6 space-y-8"
-          >
+          <div id="metrics" ref={sectionRefs.metrics} className="p-6 space-y-8">
             <RiskandReturnMetrics />
           </div>
           <div
@@ -196,17 +187,17 @@ const StrategyPage = () => {
             id="drawdowns"
             ref={sectionRefs.drawdowns}
             className="p-6 space-y-8"
-          ></div>
+          >
+            <Drawdowns strategy={strategy} />
+          </div>
           <div
             id="rollingreturns"
             ref={sectionRefs.rollingreturns}
             className="p-6 space-y-8"
           ></div>
-          <div
-            id="trades"
-            ref={sectionRefs.trades}
-            className="p-6 space-y-8"
-          ></div>
+          <div id="trades" ref={sectionRefs.trades} className="p-6 space-y-8">
+            <TradingPerformance strategy={strategy} />
+          </div>
         </ScrollArea>
       </div>
     </>

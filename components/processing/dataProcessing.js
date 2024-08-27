@@ -207,6 +207,7 @@ export const processData = (columnLabels, data) => {
   const sterlingRatio = "Requires calculation";
   const marRatio = "Requires calculation";
   const recoveryFactor = totalProfit / maxDrawdownDollar;
+  const endCapital = initialCapital + totalProfit;
 
   const metrics = {
     "Total Net Profit": totalProfit,
@@ -229,6 +230,7 @@ export const processData = (columnLabels, data) => {
     "Max Drawdown $": maxDrawdownDollar * -1,
     "Max Drawdown %": maxDrawdownPercent,
     "Initial Capital": initialCapital,
+    "Ending Capital": endCapital,
     "Total Trading Days": totalDays,
     "Return on Initial Capital": returnOnInitialCapital,
     "Annual Rate of Return": annualRateOfReturn,
@@ -267,18 +269,17 @@ export const processData2 = (columnLabels, data, initialEquity, period) => {
   rows.sort((a, b) => {
     const dateA = new Date(a[columns.indexOf("Entry Date")]);
     const dateB = new Date(b[columns.indexOf("Entry Date")]);
-
     return dateA - dateB;
   });
 
   let tradesByPeriod = new Map();
   let currentEquity = new Decimal(initialEquity);
+  let periodStartEquity = currentEquity;
 
   for (let index = 0; index < rows.length - 1; index++) {
     const row = rows[index];
     const entryPrice = new Decimal(row[columns.indexOf("Entry Price")]);
     const exitPrice = new Decimal(row[columns.indexOf("Exit Price")]);
-    // Check if 'Size' column exists
     const sizeIndex = columns.indexOf("Size");
     const size = sizeIndex !== -1 ? parseInt(row[sizeIndex]) : 1;
     const profit = exitPrice.minus(entryPrice).times(size);
@@ -287,7 +288,7 @@ export const processData2 = (columnLabels, data, initialEquity, period) => {
 
     const entryDate = new Date(row[columns.indexOf("Entry Date")]);
     const year = entryDate.getFullYear();
-    const month = entryDate.getMonth() + 1; // because JavaScript month index is 0-based
+    const month = entryDate.getMonth() + 1;
     const week = Math.floor(entryDate.getDate() / 7) + 1;
     const day = entryDate.getDate();
 
@@ -308,21 +309,32 @@ export const processData2 = (columnLabels, data, initialEquity, period) => {
     }
 
     if (!tradesByPeriod.has(periodKey)) {
-      tradesByPeriod.set(periodKey, []);
+      tradesByPeriod.set(periodKey, {
+        trades: [],
+        startEquity: periodStartEquity,
+        endEquity: periodStartEquity, // Set initial end equity to start equity
+        year: year,
+        month: period === "month" || period === "day" ? month : null,
+        day: period === "day" ? day : null
+      });
     }
 
-    tradesByPeriod.get(periodKey).push({
+    const periodData = tradesByPeriod.get(periodKey);
+    periodData.trades.push({
       entryPrice: entryPrice,
       exitPrice: exitPrice,
       size: size,
       profit: profit,
       totalEquity: currentEquity,
     });
+    periodData.endEquity = currentEquity; // Update the end equity for the period
+    periodStartEquity = currentEquity; // Update the start equity for the next period
   }
 
   let report = [];
 
-  for (let [periodKey, trades] of tradesByPeriod) {
+  for (let [periodKey, periodData] of tradesByPeriod) {
+    const trades = periodData.trades;
     let totalProfit = new Decimal(0);
     let totalLoss = new Decimal(0);
     let totalTrades = trades.length;
@@ -356,6 +368,11 @@ export const processData2 = (columnLabels, data, initialEquity, period) => {
       numberOfTrades: totalTrades,
       profitFactor: profitFactor.toFixed(2),
       percentProfitable: percentProfitable.toFixed(2) + "%",
+      startEquity: periodData.startEquity.toFixed(2),
+      endEquity: periodData.endEquity.toFixed(2),
+      year: periodData.year,
+      month: periodData.month,
+      day: periodData.day,
     });
   }
 
