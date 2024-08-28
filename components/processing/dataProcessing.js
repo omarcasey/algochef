@@ -10,6 +10,12 @@ export const processData = (columnLabels, data) => {
     return;
   }
 
+  rows.sort((a, b) => {
+    const exitDateA = new Date(a[columns.indexOf("Exit Date")]);
+    const exitDateB = new Date(b[columns.indexOf("Exit Date")]);
+    return exitDateA - exitDateB;
+  });
+
   let totalProfit = 0;
   let totalTrades = 0;
   let winningTrades = 0;
@@ -53,6 +59,7 @@ export const processData = (columnLabels, data) => {
     const row = rows[index];
     const entryDate = new Date(row[columns.indexOf("Entry Date")]);
     const entryPrice = parseFloat(row[columns.indexOf("Entry Price")]);
+    const exitDate = new Date(row[columns.indexOf("Exit Date")]);
     const exitPrice = parseFloat(row[columns.indexOf("Exit Price")]);
 
     // Check if 'Size' column exists
@@ -132,7 +139,7 @@ export const processData = (columnLabels, data) => {
     }
 
     totalProfit += profit;
-    equityCurveData.push({ x: index + 1, y: totalProfit + initialCapital });
+    equityCurveData.push({ x: exitDate, y: totalProfit + initialCapital });
 
     maxConsecutiveWins = Math.max(maxConsecutiveWins, consecutiveWins);
     maxConsecutiveLosses = Math.max(maxConsecutiveLosses, consecutiveLosses);
@@ -267,8 +274,8 @@ export const processData2 = (columnLabels, data, initialEquity, period) => {
 
   // Sort rows by entry date in ascending order
   rows.sort((a, b) => {
-    const dateA = new Date(a[columns.indexOf("Entry Date")]);
-    const dateB = new Date(b[columns.indexOf("Entry Date")]);
+    const dateA = new Date(a[columns.indexOf("Exit Date")]);
+    const dateB = new Date(b[columns.indexOf("Exit Date")]);
     return dateA - dateB;
   });
 
@@ -287,10 +294,11 @@ export const processData2 = (columnLabels, data, initialEquity, period) => {
     currentEquity = currentEquity.plus(profit);
 
     const entryDate = new Date(row[columns.indexOf("Entry Date")]);
-    const year = entryDate.getFullYear();
-    const month = entryDate.getMonth() + 1;
-    const week = Math.floor(entryDate.getDate() / 7) + 1;
-    const day = entryDate.getDate();
+    const exitDate = new Date(row[columns.indexOf("Exit Date")]);
+    const year = exitDate.getFullYear();
+    const month = exitDate.getMonth() + 1;
+    const week = Math.floor(exitDate.getDate() / 7) + 1;
+    const day = exitDate.getDate();
 
     let periodKey;
     switch (period) {
@@ -315,7 +323,7 @@ export const processData2 = (columnLabels, data, initialEquity, period) => {
         endEquity: periodStartEquity, // Set initial end equity to start equity
         year: year,
         month: period === "month" || period === "day" ? month : null,
-        day: period === "day" ? day : null
+        day: period === "day" ? day : null,
       });
     }
 

@@ -57,7 +57,7 @@ const Sidebar = () => {
 
   return (
     <div
-      className={`dark:bg-neutral-950 py-6 bg-white border-r border-foreground-200 lg:flex flex-col ${
+      className={`dark:bg-neutral-900 py-6 bg-white border-r border-foreground-200 lg:flex flex-col ${
         isExpanded ? "w-[17.5rem] p-5" : "w-16 p-2"
       } hidden transition-width duration-300 justify-between items-center`}
     >

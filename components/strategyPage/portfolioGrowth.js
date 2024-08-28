@@ -1,7 +1,8 @@
+import { useTheme } from "next-themes";
 import React from "react";
 import {
-  LineChart,
-  Line,
+  AreaChart,
+  Area,
   XAxis,
   YAxis,
   Tooltip,
@@ -10,47 +11,87 @@ import {
 } from "recharts";
 
 const PortfolioGrowth = ({ strategy }) => {
+  const { theme, setTheme } = useTheme();
+
   // Transform the strategy data into a format suitable for Recharts
   const data = strategy.equityCurveData.map(({ x, y }) => ({
-    x: x,
+    x: new Date(x.seconds * 1000), // Convert seconds to a Date object
     y: y,
-    y2: y*0.8
+    y2: y * 0.8,
   }));
 
+  // Debugging: Check the data format
+  console.log("Formatted Data for Chart:", data);
+
+  // Date formatter to show Month and Year
+  const dateFormatter = (date) => {
+    const options = { year: "numeric", month: "short" }; // 'short' format for month (e.g., "Jan")
+    return new Intl.DateTimeFormat("en-US", options).format(new Date(date));
+  };
+
   return (
-    <div className="rounded-xl shadow-xl w-full bg-white dark:bg-slate-900 py-6 px-10">
+    <div className="rounded-xl dark:shadow-2xl drop-shadow-2xl dark:border dark:shadow-green-900 w-full bg-white dark:bg-black py-6 px-10">
       <h1 className="text-xl text-blue-900 dark:text-white saturate-200 font-medium mb-6">
         Portfolio Growth
       </h1>
       <ResponsiveContainer width="100%" height={400}>
-        <LineChart data={data} margin={{ left: 35, }}>
+        <AreaChart data={data} margin={{ left: 20 }}>
+          <defs>
+            <linearGradient id="colorUv" x1="0" y1="0" x2="0" y2="1">
+              <stop
+                offset="5%"
+                stopColor={theme === "dark" ? "#22c55e" : "#8884d8"}
+                stopOpacity={0.8}
+              />
+              <stop
+                offset="95%"
+                stopColor={theme === "dark" ? "#22c55e" : "#8884d8"}
+                stopOpacity={0}
+              />
+            </linearGradient>
+            <linearGradient id="colorPv" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="5%" stopColor="#82ca9d" stopOpacity={0.8} />
+              <stop offset="95%" stopColor="#82ca9d" stopOpacity={0} />
+            </linearGradient>
+          </defs>
           <CartesianGrid vertical={false} />
-          <XAxis dataKey="x" />
+          <XAxis
+            dataKey="x"
+            type="number"
+            scale="time"
+            domain={[
+              Math.min(...data.map((d) => d.x.getTime())),
+              Math.max(...data.map((d) => d.x.getTime())),
+            ]}
+            tickFormatter={dateFormatter} // Format x-axis labels as "Jan 2015"
+            fontSize={12}
+            tickMargin={5}
+            // interval={Math.floor(data.length / 18)} // Adjust the interval to control the number of ticks
+          />
           <YAxis
-            domain={[0, "auto"]} // Set domain with rounded maxY
+            domain={[0, "auto"]}
             tickCount={6}
             tickFormatter={(value) => `$${value.toLocaleString()}`}
             allowDecimals={false}
-            axisLine={false}  // Remove the Y-axis line
+            axisLine={false}
             tickMargin={15}
             tickLine={false}
+            fontSize={14}
           />
-          <Tooltip formatter={(value) => `$${value.toLocaleString()}`} />
-          <Line
+          <Tooltip
+            labelFormatter={(value) => new Date(value).toLocaleDateString()} // Format tooltip date
+            formatter={(value) => `$${value.toLocaleString()}`}
+          />
+          <Area
             type="monotone"
             dataKey="y"
-            stroke="#0000FF"
-            strokeWidth={2}  // Blue line thickness
+            stroke={theme === "dark" ? "#22c55e" : "#8884d8"}
+            fillOpacity={1}
+            fill="url(#colorUv)"
+            strokeWidth={2}
             dot={false}
           />
-          <Line
-            type="monotone"
-            dataKey="y2"
-            stroke="#00FF00" // Green line
-            strokeWidth={2}   // Green line thickness
-            dot={false}
-          />
-        </LineChart>
+        </AreaChart>
       </ResponsiveContainer>
     </div>
   );

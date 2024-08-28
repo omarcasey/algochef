@@ -23,6 +23,7 @@ import MonthlyReturns from "@/components/strategyPage/MonthlyReturns";
 import RiskandReturnMetrics from "@/components/strategyPage/RiskandReturnMetrics";
 import Drawdowns from "@/components/strategyPage/Drawdowns";
 import TradingPerformance from "@/components/strategyPage/TradingPerformance";
+import TradeList from "@/components/strategyPage/TradeList";
 
 const StrategyPage = () => {
   const params = useParams<{ id: string }>();
@@ -197,6 +198,7 @@ const StrategyPage = () => {
           ></div>
           <div id="trades" ref={sectionRefs.trades} className="p-6 space-y-8">
             <TradingPerformance strategy={strategy} />
+            <TradeList strategy={strategy} />
           </div>
         </ScrollArea>
       </div>
