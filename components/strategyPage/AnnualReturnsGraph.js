@@ -40,7 +40,7 @@ const AnnualReturnsGraph = ({ strategy }) => {
             formatter={(value) => `$${value.toLocaleString()}`}
             cursor={{ fill: 'transparent' }} // Remove overlay on hover
           />
-          <Bar dataKey="netProfit" fill="#1200FF" />
+          <Bar dataKey="netProfit" fill="#097EF2" />
           <Bar dataKey="Benchmark" fill="#50E2B0" />
         </BarChart>
       </ResponsiveContainer>

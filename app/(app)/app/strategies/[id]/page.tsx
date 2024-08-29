@@ -24,6 +24,8 @@ import RiskandReturnMetrics from "@/components/strategyPage/RiskandReturnMetrics
 import Drawdowns from "@/components/strategyPage/Drawdowns";
 import TradingPerformance from "@/components/strategyPage/TradingPerformance";
 import TradeList from "@/components/strategyPage/TradeList";
+import StrategyInfo from "@/components/strategyPage/StrategyInfo"
+import StrategyConfig from "@/components/strategyPage/StrategyConfig"
 
 const StrategyPage = () => {
   const params = useParams<{ id: string }>();
@@ -153,7 +155,10 @@ const StrategyPage = () => {
           </Button>
         </div>
         <ScrollArea className="flex-1 rounded-md bg-slate-50 dark:bg-black">
-          <p>{strategy.name}</p>
+          <div className="p-6">
+            <StrategyInfo strategy={strategy} />
+            <StrategyConfig />
+          </div>
           <div id="summary" ref={sectionRefs.summary} className="p-6 space-y-8">
             <Summary strategy={strategy} />
             <PortfolioGrowth strategy={strategy} />

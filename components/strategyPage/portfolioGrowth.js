@@ -30,7 +30,7 @@ const PortfolioGrowth = ({ strategy }) => {
   };
 
   return (
-    <div className="rounded-xl dark:shadow-2xl drop-shadow-2xl dark:border dark:shadow-green-900 w-full bg-white dark:bg-black py-6 px-10">
+    <div className="rounded-xl drop-shadow-2xl dark:border w-full bg-white dark:bg-black py-6 px-10">
       <h1 className="text-xl text-blue-900 dark:text-white saturate-200 font-medium mb-6">
         Portfolio Growth
       </h1>
@@ -40,12 +40,12 @@ const PortfolioGrowth = ({ strategy }) => {
             <linearGradient id="colorUv" x1="0" y1="0" x2="0" y2="1">
               <stop
                 offset="5%"
-                stopColor={theme === "dark" ? "#22c55e" : "#8884d8"}
+                stopColor={theme === "dark" ? "#22c55e" : "#097EF2"}
                 stopOpacity={0.8}
               />
               <stop
                 offset="95%"
-                stopColor={theme === "dark" ? "#22c55e" : "#8884d8"}
+                stopColor={theme === "dark" ? "#22c55e" : "#097EF2"}
                 stopOpacity={0}
               />
             </linearGradient>
