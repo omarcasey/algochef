@@ -44,8 +44,8 @@ const TradeList = ({ strategy }) => {
   const endEntry = Math.min(startEntry + rowsPerPage - 1, data.length);
 
   return (
-    <div className="rounded-xl shadow-xl w-full bg-white dark:bg-slate-900 py-6 px-10">
-      <h1 className="text-xl text-blue-900 dark:text-white font-medium mb-6">
+    <div className="rounded-xl shadow-2xl dark:border w-full bg-white dark:bg-black py-6 px-10">
+      <h1 className="text-xl text-blue-900 dark:text-white saturate-200 font-medium mb-6">
         Trade Raw Data
       </h1>
       <div className="">
@@ -64,7 +64,7 @@ const TradeList = ({ strategy }) => {
             {paginatedData.map((row, rowIndex) => (
               <TableRow
                 key={rowIndex}
-                className="even:bg-gray-100 dark:even:bg-gray-800"
+                className="odd:bg-gray-100 dark:odd:bg-gray-800"
               >
                 {row.map((cell, cellIndex) => (
                   <TableCell key={cellIndex} className="p-3">

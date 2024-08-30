@@ -7,11 +7,10 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from "recharts";
 
-const Drawdowns = ({ strategy }) => {
+const DrawdownDollar = ({ strategy }) => {
   const { theme } = useTheme();
 
   // Transform strategy data to use date and value format
@@ -22,12 +21,12 @@ const Drawdowns = ({ strategy }) => {
     })
   );
 
-  // Function to calculate drawdowns from equity curve data
+  // Function to calculate dollar drawdowns from equity curve data
   const calculateDrawdown = (equityCurveData) => {
     let maxEquity = -Infinity;
     return equityCurveData.map((data) => {
       maxEquity = Math.max(maxEquity, data.y);
-      const drawdown = ((data.y - maxEquity) / maxEquity) * 100; // Convert drawdown to percentage
+      const drawdown = (maxEquity - data.y) * -1; // Calculate dollar drawdown
       return { x: data.x, y: drawdown };
     });
   };
@@ -46,7 +45,7 @@ const Drawdowns = ({ strategy }) => {
           <div className="flex flex-row items-center">
             <div className="w-2 h-2 bg-red-600 rounded-full mr-2" />
             <p className="intro text-red-600 font-semibold">
-              {`${strategy.name}: ${payload[0].value.toFixed(2)}%`}
+              {`${strategy.name}: $${payload[0].value.toFixed(2)}`}
             </p>
           </div>
         </div>
@@ -63,11 +62,11 @@ const Drawdowns = ({ strategy }) => {
   };
 
   return (
-    // <div className="rounded-xl shadow-xl w-full bg-white dark:bg-slate-900 py-6 px-10">
-    //   <h1 className="text-xl text-blue-900 dark:text-white saturate-200 font-medium mb-6">
-    //     Drawdowns
-    //   </h1>
-      <ResponsiveContainer width="100%" height={150}>
+    <div className="rounded-xl shadow-2xl dark:border w-full bg-white dark:bg-black py-6 px-10">
+      <h1 className="text-xl text-blue-900 dark:text-white saturate-200 font-medium mb-6">
+        Drawdowns
+      </h1>
+      <ResponsiveContainer width="100%" height={400}>
         <AreaChart data={drawdownData} margin={{ left: 20 }}>
           <defs>
             <linearGradient id="colorDrawdown" x1="0" y1="0" x2="0" y2="1">
@@ -95,21 +94,14 @@ const Drawdowns = ({ strategy }) => {
             tickFormatter={dateFormatter}
             fontSize={12}
             tickMargin={5}
-            // hide
           />
           <YAxis
             axisLine={false}
             tickLine={false}
-            tickFormatter={(tick) => `${tick.toFixed(1)}%`}
+            tickFormatter={(tick) => `$${tick.toFixed(0)}`}
             fontSize={12}
           />
           <Tooltip content={<CustomTooltip />} />
-          {/* <Legend
-            layout="horizontal"
-            verticalAlign="bottom"
-            align="center"
-            wrapperStyle={{ paddingTop: 10 }}
-          /> */}
           <Area
             type="monotone"
             dataKey="y"
@@ -122,8 +114,8 @@ const Drawdowns = ({ strategy }) => {
           />
         </AreaChart>
       </ResponsiveContainer>
-    // </div>
+    </div>
   );
 };
 
-export default Drawdowns;
+export default DrawdownDollar;

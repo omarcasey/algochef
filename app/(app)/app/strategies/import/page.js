@@ -300,7 +300,7 @@ const Import = () => {
       console.log("Importing data with labels:", columnLabels);
       console.log("Data to import:", data);
 
-      const result = processData(columnLabels, data);
+      const result = processData(columnLabels, data, 10000);
       const annualReturns = processData2(columnLabels, data, 10000, "year");
       const monthlyReturns = processData2(columnLabels, data, 10000, "month");
       const weeklyReturns = processData2(columnLabels, data, 10000, "week");

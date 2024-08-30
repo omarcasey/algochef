@@ -19,7 +19,7 @@ import numeral from 'numeral';
 
 const TradingPerformance = ({ strategy }) => {
   return (
-    <div className="rounded-xl shadow-xl w-full bg-white dark:bg-slate-900 py-6 px-10">
+    <div className="rounded-xl shadow-2xl dark:border w-full bg-white dark:bg-black py-6 px-10">
       <h1 className="text-xl text-blue-900 dark:text-white saturate-200 font-medium mb-6">
         Trading Performance
       </h1>
@@ -34,44 +34,44 @@ const TradingPerformance = ({ strategy }) => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          <TableRow>
+          <TableRow className="odd:bg-gray-100 dark:odd:bg-gray-800">
             <TableCell className="font-medium">Total Trades</TableCell>
             <TableCell className="text-right">{numeral(strategy.metrics['Initial Capital']).format('$0,0')}</TableCell>
             <TableCell className="text-right">$10,000</TableCell>
           </TableRow>
-          <TableRow>
+          <TableRow className="odd:bg-gray-100 dark:odd:bg-gray-800">
             <TableCell className="font-medium">Winning Trades</TableCell>
             <TableCell className="text-right">{numeral(strategy.metrics['Ending Capital']).format('$0,0')}</TableCell>
             <TableCell className="text-right">$90,228</TableCell>
           </TableRow>
-          <TableRow>
+          <TableRow className="odd:bg-gray-100 dark:odd:bg-gray-800">
             <TableCell className="font-medium">
               Losing Trades
             </TableCell>
             <TableCell className="text-right">9.20%</TableCell>
             <TableCell className="text-right">10.11%</TableCell>
-          </TableRow>
-          <TableRow>
+          </TableRow >
+          <TableRow className="odd:bg-gray-100 dark:odd:bg-gray-800">
             <TableCell className="font-medium">Win %</TableCell>
             <TableCell className="text-right">14.18%</TableCell>
             <TableCell className="text-right">15.73%</TableCell>
           </TableRow>
-          <TableRow>
+          <TableRow className="odd:bg-gray-100 dark:odd:bg-gray-800">
             <TableCell className="font-medium">Average Win</TableCell>
             <TableCell className="text-right">35.41%</TableCell>
             <TableCell className="text-right">32.73%</TableCell>
           </TableRow>
-          <TableRow>
+          <TableRow className="odd:bg-gray-100 dark:odd:bg-gray-800">
             <TableCell className="font-medium">Median Win</TableCell>
             <TableCell className="text-right">-14.41%</TableCell>
             <TableCell className="text-right">-36.73%</TableCell>
           </TableRow>
-          <TableRow>
+          <TableRow className="odd:bg-gray-100 dark:odd:bg-gray-800">
             <TableCell className="font-medium">Average Loss</TableCell>
             <TableCell className="text-right">0.60</TableCell>
             <TableCell className="text-right">0.61</TableCell>
           </TableRow>
-          <TableRow>
+          <TableRow className="odd:bg-gray-100 dark:odd:bg-gray-800">
             <TableCell className="font-medium">Median Loss</TableCell>
             <TableCell className="text-right">1.00</TableCell>
             <TableCell className="text-right">0.91</TableCell>

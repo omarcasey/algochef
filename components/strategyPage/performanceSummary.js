@@ -19,7 +19,7 @@ import numeral from 'numeral';
 
 const Summary = ({ strategy }) => {
   return (
-    <div className="rounded-xl drop-shadow-2xl dark:border w-full bg-white dark:bg-black py-6 px-10">
+    <div className="rounded-xl shadow-2xl dark:border w-full bg-white dark:bg-black py-6 px-10">
       <h1 className="text-xl text-blue-900 dark:text-white saturate-200 font-medium mb-6">
         Performance Summary
       </h1>
@@ -27,7 +27,7 @@ const Summary = ({ strategy }) => {
         <TableHeader>
           <TableRow>
             <TableHead>Metric</TableHead>
-            <TableHead className="text-right">Dual Momentum Model</TableHead>
+            <TableHead className="text-right">{strategy.name}</TableHead>
             <TableHead className="text-right">
               Vanguard 500 Index Investor
             </TableHead>
@@ -45,10 +45,16 @@ const Summary = ({ strategy }) => {
             <TableCell className="text-right">$90,228</TableCell>
           </TableRow>
           <TableRow className="even:bg-gray-100 dark:even:bg-gray-800">
+            <TableCell className="font-medium">Net Profit
+            </TableCell>
+            <TableCell className="text-right">{numeral(strategy.metrics['Total Net Profit']).format('$0,0')}</TableCell>
+            <TableCell className="text-right">$90,228</TableCell>
+          </TableRow>
+          <TableRow className="even:bg-gray-100 dark:even:bg-gray-800">
             <TableCell className="font-medium">
               Annualized Return (CAGR)
             </TableCell>
-            <TableCell className="text-right">9.20%</TableCell>
+            <TableCell className="text-right">{numeral(strategy.metrics['Annual Rate of Return']).format('0.00%')}</TableCell>
             <TableCell className="text-right">10.11%</TableCell>
           </TableRow>
           <TableRow className="even:bg-gray-100 dark:even:bg-gray-800">

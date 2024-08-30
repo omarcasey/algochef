@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useState } from "react";
 import {
   Accordion,
   AccordionContent,
@@ -23,8 +23,57 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "../ui/button";
+import { processData, processData2 } from "../processing/dataProcessing";
+import { useFirestore } from "reactfire";
+import { doc, Timestamp, updateDoc } from "firebase/firestore";
 
-const StrategyConfig = () => {
+const StrategyConfig = ({ strategy }) => {
+  const [initialCapital, setInitialCapital] = useState(parseFloat(strategy.metrics["Initial Capital"]));
+  const firestore = useFirestore();
+
+  const reprocessData = async () => {
+    // Transform Firestore data
+    const transformData = (firestoreData) => {
+      return firestoreData.map((entry) => {
+        return Object.values(entry).flat();
+      });
+    };
+
+    const data = transformData(strategy.data);
+
+    const result = processData(strategy.columnLabels, data, initialCapital);
+    const annualReturns = processData2(strategy.columnLabels, data, initialCapital, "year");
+    const monthlyReturns = processData2(strategy.columnLabels, data, initialCapital, "month");
+    const weeklyReturns = processData2(strategy.columnLabels, data, initialCapital, "week");
+    const dailyReturns = processData2(strategy.columnLabels, data, initialCapital, "day");
+
+    console.log(result);
+
+    try {
+      console.log("yo")
+      console.log(strategy.NO_ID_FIELD)
+
+      // Get the document reference for the existing strategy
+      const strategyDocRef = doc(firestore, "strategies", strategy.NO_ID_FIELD);
+      
+
+      // Update the existing strategy document
+      await updateDoc(strategyDocRef, {
+        metrics: result.metrics,
+        equityCurveData: result.equityCurveData,
+        updatedAt: Timestamp.now(), // Track when the update occurred
+        annualReturns: annualReturns,
+        monthlyReturns: monthlyReturns,
+        weeklyReturns: weeklyReturns,
+        dailyReturns: dailyReturns,
+      });
+
+      console.log("Strategy updated successfully");
+    } catch (error) {
+      console.error("Error updating strategy: ", error);
+    }
+  };
+
   return (
     <div className="py-6">
       <Accordion type="single" collapsible className="w-full">
@@ -46,7 +95,8 @@ const StrategyConfig = () => {
                 </TooltipProvider>
               </div>
               <Input
-                defaultValue={10000}
+                value={initialCapital}
+                onChange={(e) => setInitialCapital(parseFloat(e.target.value) || 0)} // Converts to number, defaults to 0 if empty
                 placeholder="Amount..."
                 type="number"
                 className=""
@@ -94,7 +144,9 @@ const StrategyConfig = () => {
             </div>
             <div className="flex flex-row">
               <div className="flex flex-row items-center w-1/4"></div>
-              <Button size={"sm"} className="w-32">Run</Button>
+              <Button size={"sm"} className="w-32" onClick={reprocessData}>
+                Run
+              </Button>
             </div>
           </AccordionContent>
         </AccordionItem>

@@ -1,7 +1,7 @@
 import Decimal from "decimal.js";
 import { mean, std } from "mathjs";
 
-export const processData = (columnLabels, data) => {
+export const processData = (columnLabels, data, initialCapital) => {
   const columns = Object.values(columnLabels);
   const rows = data;
 
@@ -32,7 +32,7 @@ export const processData = (columnLabels, data) => {
   let currentPeak = 0;
   let maxDrawdownDollar = 0;
   let maxDrawdownPercent = 0;
-  const initialCapital = 10000;
+  // const initialCapital = 10000;
   let totalDays = 0;
   let totalProfitableMonths = 0;
   let previousEntryDate = null;

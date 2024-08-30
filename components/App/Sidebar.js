@@ -77,7 +77,11 @@ const Sidebar = () => {
             <p className="text-xl font-bold">TradeTrackr</p>
           </Link>
           <Button variant="ghost" onClick={toggleSidebar}>
-            <GoSidebarCollapse />
+            <GoSidebarCollapse
+              className={` transition-transform ${
+                isExpanded ? " rotate-180" : ""
+              }`}
+            />
           </Button>
         </div>
         <p
