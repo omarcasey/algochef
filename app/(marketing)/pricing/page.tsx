@@ -123,7 +123,7 @@ const Pricing = () => {
                         <div className='w-full h-full flex justify-center items-end'>
                             <Link href='/signup' className='w-full'>
                                 <div className='bg-gradient-to-br from-cyan-500 to-purple-500 p-[2px] rounded-lg'>
-                                    <p className='bg-black text-white rounded-lg px-4 py-2 font-semibold tracking-wide'>Get 14 Days Free Trial</p>
+                                    <p className='bg-black text-white rounded-lg px-4 py-2 font-semibold tracking-wide'>Get 14 Days Free Trial.</p>
                                 </div>
                             </Link>
                         </div>
