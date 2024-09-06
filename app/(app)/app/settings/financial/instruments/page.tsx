@@ -31,6 +31,7 @@ import { MoreHorizontal } from "lucide-react";
 import { query, collection, where } from "firebase/firestore";
 import { useFirestore, useFirestoreCollectionData, useUser } from "reactfire";
 import { LoadingSpinner } from "@/components/ui/spinner";
+import numeral from "numeral";
 
 const Instruments = () => {
   const { data: user, status } = useUser();
@@ -82,6 +83,8 @@ const Instruments = () => {
                   <TableHead>Name</TableHead>
                   <TableHead>Symbol</TableHead>
                   <TableHead>Big Point Value</TableHead>
+                  <TableHead>Comission</TableHead>
+                  <TableHead>Slippage</TableHead>
                   <TableHead>Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -92,6 +95,8 @@ const Instruments = () => {
                       <TableCell>{instrument.name}</TableCell>
                       <TableCell>{instrument.symbol}</TableCell>
                       <TableCell>{instrument.bpv}</TableCell>
+                      <TableCell>{numeral(instrument.comission).format("$0,0.00")}</TableCell>
+                      <TableCell>{numeral(instrument.slippage).format("$0,0.00")}</TableCell>
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>

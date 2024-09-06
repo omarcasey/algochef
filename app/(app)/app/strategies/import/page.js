@@ -69,6 +69,7 @@ const Import = () => {
   const [mergeLines, setMergeLines] = useState(false);
   const [selectedInstrument, setSelectedInstrument] = useState(null);
   const [selectedTimeframe, setSelectedTimeframe] = useState(null);
+  const [selectedPositionType, setSelectedPositionType] = useState(null);
   const [selectedFormat, setSelectedFormat] = useState(null);
   const [formatName, setFormatName] = useState("");
   const [strategyName, setStrategyName] = useState("");
@@ -152,6 +153,41 @@ const Import = () => {
       }
     }
   }, [fileContent, linesToSkip, skipLines, delimiters]);
+
+  // Effect to update the position type when data or column labels change
+  useEffect(() => {
+    // Find if the "Long/Short" label is selected and get its index
+    const longShortEntry = Object.entries(columnLabels).find(
+      ([, label]) => label === "Long/Short"
+    );
+
+    // Proceed only if the "Long/Short" label is found
+    if (longShortEntry) {
+      const [longShortIndex] = longShortEntry;
+
+      // Scan the corresponding column in data
+      const longShortValues = data.map((row) =>
+        row[longShortIndex]?.toLowerCase()
+      );
+
+      // Determine the type of positions present in the data
+      const hasLong = longShortValues.includes("long");
+      const hasShort = longShortValues.includes("short");
+
+      // Set position type based on the column data
+      if (hasLong && hasShort) {
+        setSelectedPositionType("both");
+      } else if (hasLong) {
+        setSelectedPositionType("long");
+      } else if (hasShort) {
+        setSelectedPositionType("short");
+      } else {
+        setSelectedPositionType(null);
+      }
+    } else {
+      setSelectedPositionType(null); // Reset if "Long/Short" is not selected
+    }
+  }, [data, columnLabels]);
 
   const handleFileUpload = (event) => {
     const file = event.target.files[0];
@@ -295,16 +331,46 @@ const Import = () => {
         return;
       }
 
+      if (!selectedInstrument) {
+        toast({
+          variant: "destructive",
+          title: "Uh oh! Something went wrong.",
+          description:
+            "Error: You must select an instrument.",
+        });
+        return;
+      }
+
+      if (!selectedTimeframe) {
+        toast({
+          variant: "destructive",
+          title: "Uh oh! Something went wrong.",
+          description:
+            "Error: You must select a timeframe.",
+        });
+        return;
+      }
+
+      if (!selectedPositionType) {
+        toast({
+          variant: "destructive",
+          title: "Uh oh! Something went wrong.",
+          description:
+            "Error: You must select a position type or specifiy the 'Long/Short' column.",
+        });
+        return;
+      }
+
       // Assuming you want to process the data for import
       // For example, logging the data or performing any actions with it
       console.log("Importing data with labels:", columnLabels);
       console.log("Data to import:", data);
 
-      const result = processData(columnLabels, data, 10000);
-      const annualReturns = processData2(columnLabels, data, 10000, "year");
-      const monthlyReturns = processData2(columnLabels, data, 10000, "month");
-      const weeklyReturns = processData2(columnLabels, data, 10000, "week");
-      const dailyReturns = processData2(columnLabels, data, 10000, "day");
+      const result = processData(columnLabels, data, 10000, selectedPositionType);
+      const annualReturns = processData2(columnLabels, data, 10000, "year", selectedPositionType);
+      const monthlyReturns = processData2(columnLabels, data, 10000, "month", selectedPositionType);
+      // const weeklyReturns = processData2(columnLabels, data, 10000, "week", selectedPositionType);
+      // const dailyReturns = processData2(columnLabels, data, 10000, "day", selectedPositionType);
 
       // Add a new document with a generated ID and strategy name.
       const strategyDoc = await addDoc(collection(firestore, "strategies"), {
@@ -315,10 +381,11 @@ const Import = () => {
         userId: user.uid,
         annualReturns: annualReturns,
         monthlyReturns: monthlyReturns,
-        weeklyReturns: weeklyReturns,
-        dailyReturns: dailyReturns,
+        // weeklyReturns: weeklyReturns,
+        // dailyReturns: dailyReturns,
         columnLabels: columnLabels,
         data: data.map((row, index) => ({ row })),
+        positionTypes: selectedPositionType,
         // include any other relevant fields here
       });
 
@@ -379,7 +446,7 @@ const Import = () => {
               value={selectedInstrument}
               onValueChange={(value) => setSelectedInstrument(value)}
             >
-              <SelectTrigger className="w-[14rem] mr-5">
+              <SelectTrigger className="w-[14rem]">
                 <SelectValue placeholder="Instruments" />
               </SelectTrigger>
               <SelectContent>
@@ -424,6 +491,35 @@ const Import = () => {
                 </SelectGroup>
               </SelectContent>
             </Select>
+            <Select
+              value={selectedPositionType}
+              onValueChange={(value) => setSelectedPositionType(value)}
+              disabled={Object.values(columnLabels).includes("Long/Short")}
+            >
+              <SelectTrigger className="w-[8rem]">
+                <SelectValue placeholder="Long/Short" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  <SelectLabel>Select Position Type</SelectLabel>
+                  <SelectItem value="long">Long</SelectItem>
+                  <SelectItem value="short">Short</SelectItem>
+                  <SelectItem value="both" className="hidden">Both</SelectItem>
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+            <div className="flex flex-row items-center cursor-pointer">
+                <Checkbox
+                  id="comission"
+                  className="mr-1 ml-4"
+                  // checked={delimiters.tab}
+                  // onCheckedChange={handleDelimiterChange("tab")}
+                  disabled={loading}
+                />
+                <Label className="cursor-pointer" htmlFor="comission">
+                  Subtract Comission & Slippage
+                </Label>
+              </div>
             <Select
               value={selectedFormat}
               onValueChange={(value) => handleFormatSelect(value)}

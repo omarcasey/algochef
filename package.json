@@ -53,6 +53,7 @@
   },
   "devDependencies": {
     "@types/node": "latest",
+    "@types/numeral": "^2.0.5",
     "@types/papaparse": "^5.3.14",
     "@types/react": "latest",
     "@types/react-dom": "latest",

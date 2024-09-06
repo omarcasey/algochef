@@ -1,7 +1,12 @@
 import Decimal from "decimal.js";
 import { mean, std } from "mathjs";
 
-export const processData = (columnLabels, data, initialCapital) => {
+export const processData = (
+  columnLabels,
+  data,
+  initialCapital,
+  positionTypes
+) => {
   const columns = Object.values(columnLabels);
   const rows = data;
 
@@ -66,7 +71,31 @@ export const processData = (columnLabels, data, initialCapital) => {
     const sizeIndex = columns.indexOf("Size");
     const size = sizeIndex !== -1 ? parseInt(row[sizeIndex]) : 1;
 
-    const profit = (exitPrice - entryPrice) * size;
+    let profit;
+
+    if (positionTypes === "long") {
+      // Long trades: Profit = exitPrice - entryPrice
+      profit = (exitPrice - entryPrice) * size;
+    } else if (positionTypes === "short") {
+      // Short trades: Profit = entryPrice - exitPrice
+      profit = (entryPrice - exitPrice) * size;
+    } else if (positionTypes === "both") {
+      // Determine profit based on individual trade's position type
+      const positionType = row[columns.indexOf("Long/Short")].toLowerCase(); // Convert to lowercase
+      if (positionType === "long") {
+        profit = (exitPrice - entryPrice) * size;
+      } else if (positionType === "short") {
+        profit = (entryPrice - exitPrice) * size;
+      } else {
+        console.warn(
+          `Unknown position type '${positionType}' in row ${index + 1}`
+        );
+        continue; // Skip this row if position type is unknown
+      }
+    } else {
+      console.error(`Invalid positionTypes value '${positionTypes}'`);
+      return;
+    }
 
     totalTrades++;
 
@@ -263,7 +292,13 @@ export const processData = (columnLabels, data, initialCapital) => {
   return { equityCurveData, metrics };
 };
 
-export const processData2 = (columnLabels, data, initialEquity, period) => {
+export const processData2 = (
+  columnLabels,
+  data,
+  initialEquity,
+  period,
+  positionTypes
+) => {
   const columns = Object.values(columnLabels);
   const rows = data;
 
@@ -283,13 +318,38 @@ export const processData2 = (columnLabels, data, initialEquity, period) => {
   let currentEquity = new Decimal(initialEquity);
   let periodStartEquity = currentEquity;
 
-  for (let index = 0; index < rows.length - 1; index++) {
+  for (let index = 0; index < rows.length; index++) {
     const row = rows[index];
     const entryPrice = new Decimal(row[columns.indexOf("Entry Price")]);
     const exitPrice = new Decimal(row[columns.indexOf("Exit Price")]);
     const sizeIndex = columns.indexOf("Size");
     const size = sizeIndex !== -1 ? parseInt(row[sizeIndex]) : 1;
-    const profit = exitPrice.minus(entryPrice).times(size);
+
+    let profit;
+
+    if (positionTypes === "long") {
+      // Long trades: Profit = exitPrice - entryPrice
+      profit = exitPrice.minus(entryPrice).times(size);
+    } else if (positionTypes === "short") {
+      // Short trades: Profit = entryPrice - exitPrice
+      profit = entryPrice.minus(exitPrice).times(size);
+    } else if (positionTypes === "both") {
+      // Determine profit based on individual trade's position type
+      const positionType = row[columns.indexOf("Long/Short")].toLowerCase(); // Convert to lowercase
+      if (positionType === "long") {
+        profit = exitPrice.minus(entryPrice).times(size);
+      } else if (positionType === "short") {
+        profit = entryPrice.minus(exitPrice).times(size);
+      } else {
+        console.warn(
+          `Unknown position type '${positionType}' in row ${index + 1}`
+        );
+        continue; // Skip this row if position type is unknown
+      }
+    } else {
+      console.error(`Invalid positionTypes value '${positionTypes}'`);
+      return;
+    }
 
     currentEquity = currentEquity.plus(profit);
 

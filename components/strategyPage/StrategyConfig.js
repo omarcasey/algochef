@@ -41,11 +41,11 @@ const StrategyConfig = ({ strategy }) => {
 
     const data = transformData(strategy.data);
 
-    const result = processData(strategy.columnLabels, data, initialCapital);
-    const annualReturns = processData2(strategy.columnLabels, data, initialCapital, "year");
-    const monthlyReturns = processData2(strategy.columnLabels, data, initialCapital, "month");
-    const weeklyReturns = processData2(strategy.columnLabels, data, initialCapital, "week");
-    const dailyReturns = processData2(strategy.columnLabels, data, initialCapital, "day");
+    const result = processData(strategy.columnLabels, data, initialCapital, strategy.positionTypes);
+    const annualReturns = processData2(strategy.columnLabels, data, initialCapital, "year", strategy.positionTypes);
+    const monthlyReturns = processData2(strategy.columnLabels, data, initialCapital, "month", strategy.positionTypes);
+    const weeklyReturns = processData2(strategy.columnLabels, data, initialCapital, "week", strategy.positionTypes);
+    const dailyReturns = processData2(strategy.columnLabels, data, initialCapital, "day", strategy.positionTypes);
 
     console.log(result);
 
