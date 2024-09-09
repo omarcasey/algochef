@@ -46,6 +46,11 @@ import { ChevronDown, Loader2, MoreHorizontal, Plus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { FaPlus } from "react-icons/fa";
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "../ui/resizable";
 
 const UserStrategies = () => {
   const { data: user, status } = useUser();
@@ -63,6 +68,12 @@ const UserStrategies = () => {
   const [editedName, setEditedName] = useState(""); // New state for edited name
 
   const [isGenerateDialogOpen, setIsGenerateDialogOpen] = useState(false);
+
+  const [currentPage, setCurrentPage] = useState(0);
+  const [rowsPerPage, setRowsPerPage] = useState(12);
+
+  // Add new state variables for sorting
+  const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
 
   // Create a query to filter strategies by userId
   const strategiesQuery = query(
@@ -140,9 +151,65 @@ const UserStrategies = () => {
     return <div>Error fetching strategies.</div>;
   }
 
+  const handlePageChange = (newPage) => {
+    setCurrentPage(newPage);
+  };
+
+  const handleRowsPerPageChange = (event) => {
+    setRowsPerPage(parseInt(event.target.value, 10));
+    setCurrentPage(0); // Reset to first page
+  };
+
   const filteredStrategies = strategies.filter((strategy) =>
     strategy.name.toLowerCase().includes(filter.toLowerCase())
   );
+
+  const sortedStrategies = [...filteredStrategies].sort((a, b) => {
+    if (sortConfig.key) {
+      const aValue =
+        sortConfig.key === "createdAt"
+          ? a[sortConfig.key].seconds
+          : a[sortConfig.key].toLowerCase();
+      const bValue =
+        sortConfig.key === "createdAt"
+          ? b[sortConfig.key].seconds
+          : b[sortConfig.key].toLowerCase();
+      if (aValue < bValue) {
+        return sortConfig.direction === "asc" ? -1 : 1;
+      }
+      if (aValue > bValue) {
+        return sortConfig.direction === "asc" ? 1 : -1;
+      }
+    }
+    return 0;
+  });
+
+  // Handle sorting on column header click
+  const handleSort = (key) => {
+    let direction = "asc";
+    if (sortConfig.key === key && sortConfig.direction === "asc") {
+      direction = "desc";
+    }
+    setSortConfig({ key, direction });
+  };
+
+  // Use sortedStrategies instead of paginatedStrategies in the map function
+  const paginatedStrategies = sortedStrategies.slice(
+    currentPage * rowsPerPage,
+    currentPage * rowsPerPage + rowsPerPage
+  );
+
+  const pageCount = Math.ceil(filteredStrategies.length / rowsPerPage);
+  const startEntry = currentPage * rowsPerPage + 1;
+  const endEntry = Math.min(
+    startEntry + rowsPerPage - 1,
+    filteredStrategies.length
+  );
+
+  const handleItemColumnClick = (e) => {
+    e.stopPropagation(); // Prevents the dropdown from closing
+    // Add any additional logic here
+  };
 
   return (
     <div className="max-w-7xl w-full flex flex-col justify-center">
@@ -176,22 +243,72 @@ const UserStrategies = () => {
                   onCheckedChange={handleSelectAllChange}
                 />
               </TableHead>
-              <TableHead>Name</TableHead>
-              {/* <TableHead>Weight</TableHead> */}
+              <TableHead
+                onClick={() => handleSort("name")}
+                className="cursor-pointer w-1/3"
+              >
+                Name{" "}
+                {sortConfig.key === "name"
+                  ? sortConfig.direction === "asc"
+                    ? "▲"
+                    : "▼"
+                  : ""}
+              </TableHead>
               <TableHead>Details</TableHead>
-              <TableHead>Date Created</TableHead>
+              <TableHead
+                onClick={() => handleSort("createdAt")}
+                className="cursor-pointer"
+              >
+                Date Created{" "}
+                {sortConfig.key === "createdAt"
+                  ? sortConfig.direction === "asc"
+                    ? "▲"
+                    : "▼"
+                  : ""}
+              </TableHead>
               <TableHead>Type</TableHead>
-              <TableHead>Actions</TableHead>
+              <TableHead className="pr-0">
+                <div className="flex flex-row items-center justify-between h-full">
+                  <p>Actions</p>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <div className="hover:bg-gray-200 transition-all cursor-pointer w-12 h-full flex items-center justify-center">
+                        <Plus className="w-4 h-4" />
+                      </div>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent>
+                      <DropdownMenuLabel>Columns</DropdownMenuLabel>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem className="flex items-center">
+                        <Checkbox className="w-3.5 h-3.5 mr-2" /> Net Profit $
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="flex items-center">
+                        <Checkbox className="w-3.5 h-3.5 mr-2" /> Maximum
+                        Drawdown $
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="flex items-center">
+                        <Checkbox className="w-3.5 h-3.5 mr-2" /> Return /
+                        Drawdown Ratio
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="flex items-center">
+                        <Checkbox className="w-3.5 h-3.5 mr-2" /> No. of Trades
+                      </DropdownMenuItem>
+                      <DropdownMenuItem className="flex items-center">
+                        <Checkbox className="w-3.5 h-3.5 mr-2" /> Long / Short
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
+              </TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {filteredStrategies.length ? (
-              filteredStrategies.map((strategy) => (
+            {paginatedStrategies.length ? (
+              paginatedStrategies.map((strategy) => (
                 <TableRow
                   key={strategy.id}
                   data-state={selectedRows.has(strategy.id) ? "selected" : ""}
-                  onClick={() => handleRowCheckboxChange(strategy.id)} // Select row on click
-                  className="" // Add a pointer cursor to indicate clickable row
+                  onClick={() => handleRowCheckboxChange(strategy.id)}
                 >
                   <TableCell>
                     <Checkbox
@@ -240,32 +357,23 @@ const UserStrategies = () => {
                         </DropdownMenuItem>
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
-                          onClick={() =>
-                            router.push(
-                              `/app/strategies/${strategy.id}`
-                            )
-                          }
-                        >
-                          View report
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
                           onClick={(e) => {
-                            e.stopPropagation();
-                            setStrategyToDelete(strategy.id);
-                            setEditedName(strategy.name)
-                            setIsEditDialogOpen(true);
-                          }}
-                        >
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setStrategyToDelete(strategy.id);
                             setIsDeleteDialogOpen(true);
+                            setStrategyToDelete(strategy.id);
+                            e.stopPropagation();
                           }}
                         >
                           Delete
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={(e) => {
+                            setIsEditDialogOpen(true);
+                            setStrategyToDelete(strategy.id);
+                            setEditedName(strategy.name);
+                            e.stopPropagation();
+                          }}
+                        >
+                          Edit
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -274,16 +382,81 @@ const UserStrategies = () => {
               ))
             ) : (
               <TableRow>
-                <TableCell
-                  colSpan={7} // Adjust the colspan according to the number of columns
-                  className="h-24 text-center"
-                >
-                  No results.
+                <TableCell colSpan="6" className="text-center">
+                  No strategies found.
                 </TableCell>
               </TableRow>
             )}
           </TableBody>
         </Table>
+      </div>
+
+      {/* Pagination Controls */}
+      <div className="flex flex-col mt-4">
+        <div className="flex justify-between items-center mb-2">
+          <div className="flex items-center text-sm">
+            <span className="mr-2">Show</span>
+            <select
+              value={rowsPerPage}
+              onChange={handleRowsPerPageChange}
+              className="border border-gray-300 dark:border-gray-600 rounded-md p-1"
+            >
+              <option value={12}>12</option>
+              <option value={36}>36</option>
+              <option value={60}>60</option>
+              <option value={100}>100</option>
+            </select>
+            <span className="ml-2">entries</span>
+          </div>
+          <div className="text-sm">
+            Showing {startEntry} to {endEntry} of {filteredStrategies.length}{" "}
+            entries
+          </div>
+          <div className="flex space-x-2">
+            <button
+              onClick={() => setCurrentPage(0)}
+              disabled={currentPage === 0}
+              className={`bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1 text-sm cursor-pointer ${
+                currentPage === 0 ? "text-gray-400 cursor-not-allowed" : ""
+              }`}
+            >
+              First
+            </button>
+            <button
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 0))}
+              disabled={currentPage === 0}
+              className={`bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1 text-sm cursor-pointer ${
+                currentPage === 0 ? "text-gray-400 cursor-not-allowed" : ""
+              }`}
+            >
+              Previous
+            </button>
+            <button
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(prev + 1, pageCount - 1))
+              }
+              disabled={currentPage >= pageCount - 1}
+              className={`bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1 text-sm cursor-pointer ${
+                currentPage >= pageCount - 1
+                  ? "text-gray-400 cursor-not-allowed"
+                  : ""
+              }`}
+            >
+              Next
+            </button>
+            <button
+              onClick={() => setCurrentPage(pageCount - 1)}
+              disabled={currentPage >= pageCount - 1}
+              className={`bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1 text-sm cursor-pointer ${
+                currentPage >= pageCount - 1
+                  ? "text-gray-400 cursor-not-allowed"
+                  : ""
+              }`}
+            >
+              Last
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Edit Strategy Dialog */}

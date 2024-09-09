@@ -68,7 +68,7 @@ const PortfolioGrowth = ({ strategy }) => {
   // }
 
   // Debugging: Check the data format
-  console.log("Formatted Data for Chart:", data);
+  // console.log("Formatted Data for Chart:", data);
 
   // Date formatter to show Month and Year
   const dateFormatter = (date) => {
@@ -113,7 +113,7 @@ const PortfolioGrowth = ({ strategy }) => {
             tickFormatter={dateFormatter} // Format x-axis labels as "Jan 2015"
             fontSize={12}
             tickMargin={5}
-            interval="preserveStartEnd" // Adjust the interval to control the number of ticks
+            interval={Math.floor(data.length / 12)} // Adjust the interval to control the number of ticks
             // hide
           />
           <YAxis

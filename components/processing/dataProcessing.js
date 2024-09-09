@@ -168,7 +168,19 @@ export const processData = (
     }
 
     totalProfit += profit;
-    equityCurveData.push({ x: exitDate, y: totalProfit + initialCapital });
+
+    // Check if there is already a point for this exitDate
+    const existingPoint = equityCurveData.find(
+      (point) => point.x.getTime() === exitDate.getTime()
+    );
+
+    if (existingPoint) {
+      // Update the existing y value
+      existingPoint.y += profit;
+    } else {
+      // Add a new point for this date
+      equityCurveData.push({ x: exitDate, y: totalProfit + initialCapital });
+    }
 
     maxConsecutiveWins = Math.max(maxConsecutiveWins, consecutiveWins);
     maxConsecutiveLosses = Math.max(maxConsecutiveLosses, consecutiveLosses);

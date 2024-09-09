@@ -201,8 +201,8 @@ const StrategyPage = () => {
             </p>
           </Button>
           <div className="flex items-center space-x-2 ml-3 !mt-10">
-            <Switch id="airplane-mode" />
-            <Label htmlFor="airplane-mode">Data in $ / %</Label>
+            <Switch className="data-[state=checked]:bg-blue-500"  id="$/%" />
+            <Label htmlFor="$/%">Data in $ / %</Label>
           </div>
         </div>
         <ScrollArea className="flex-1 rounded-md bg-slate-50 dark:bg-black">
