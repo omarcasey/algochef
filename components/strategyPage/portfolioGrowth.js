@@ -36,36 +36,36 @@ const PortfolioGrowth = ({ strategy }) => {
   const { theme, setTheme } = useTheme();
 
   // Transform the strategy data into a format suitable for Recharts
-  // const data = strategy.equityCurveData.map(({ x, y }) => ({
-  //   x: new Date(x.seconds * 1000), // Convert seconds to a Date object
-  //   y: y,
-  //   y2: y * 0.8,
-  // }));
+  const data = strategy.equityCurveData.map(({ x, y }) => ({
+    x: new Date(x.seconds * 1000), // Convert seconds to a Date object
+    y: y,
+    y2: y * 0.8,
+  }));
 
   // Transform the strategy's monthlyReturns data for Recharts, setting the date to the last day of the month
-  const data = strategy.monthlyReturns.map(({ period, endEquity }) => {
-    // Convert the period (e.g., "6/2017") to the last day of that month
-    const [month, year] = period.split("/").map(Number);
-    const date = new Date(year, month, 0); // Creates a Date object set to the last day of the month (0 gets the last day of the previous month)
-    return {
-      x: date,
-      y: parseFloat(endEquity), // Convert endEquity to a number
-    };
-  });
+  // const data = strategy.monthlyReturns.map(({ period, endEquity }) => {
+  //   // Convert the period (e.g., "6/2017") to the last day of that month
+  //   const [month, year] = period.split("/").map(Number);
+  //   const date = new Date(year, month, 0); // Creates a Date object set to the last day of the month (0 gets the last day of the previous month)
+  //   return {
+  //     x: date,
+  //     y: parseFloat(endEquity), // Convert endEquity to a number
+  //   };
+  // });
 
   // Add the initial data point for the start equity of the first month
-  if (strategy.monthlyReturns.length > 0) {
-    const firstReturn = strategy.monthlyReturns[0];
-    const [firstMonth, firstYear] = firstReturn.period.split("/").map(Number);
-    const startEquity = parseFloat(firstReturn.startEquity);
+  // if (strategy.monthlyReturns.length > 0) {
+  //   const firstReturn = strategy.monthlyReturns[0];
+  //   const [firstMonth, firstYear] = firstReturn.period.split("/").map(Number);
+  //   const startEquity = parseFloat(firstReturn.startEquity);
 
-    // Calculate the date for the previous month
-    const startMonthDate = new Date(firstYear, firstMonth - 1, 0); // Set to the last day of the previous month
-    data.unshift({
-      x: startMonthDate,
-      y: startEquity,
-    });
-  }
+  //   // Calculate the date for the previous month
+  //   const startMonthDate = new Date(firstYear, firstMonth - 1, 0); // Set to the last day of the previous month
+  //   data.unshift({
+  //     x: startMonthDate,
+  //     y: startEquity,
+  //   });
+  // }
 
   // Debugging: Check the data format
   console.log("Formatted Data for Chart:", data);
@@ -113,8 +113,8 @@ const PortfolioGrowth = ({ strategy }) => {
             tickFormatter={dateFormatter} // Format x-axis labels as "Jan 2015"
             fontSize={12}
             tickMargin={5}
-            // interval={Math.floor(data.length / 18)} // Adjust the interval to control the number of ticks
-            hide
+            interval="preserveStartEnd" // Adjust the interval to control the number of ticks
+            // hide
           />
           <YAxis
             domain={[0, "auto"]}
@@ -147,7 +147,7 @@ const PortfolioGrowth = ({ strategy }) => {
           />
         </AreaChart>
       </ResponsiveContainer>
-      <Drawdowns strategy={strategy} />
+      {/* <Drawdowns strategy={strategy} /> */}
     </div>
   );
 };

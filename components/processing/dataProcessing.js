@@ -381,6 +381,8 @@ export const processData2 = (
         trades: [],
         startEquity: periodStartEquity,
         endEquity: periodStartEquity, // Set initial end equity to start equity
+        maxEquity: periodStartEquity, // Initial max equity
+        minEquity: periodStartEquity, // Initial min equity
         year: year,
         month: period === "month" || period === "day" ? month : null,
         day: period === "day" ? day : null,
@@ -396,6 +398,14 @@ export const processData2 = (
       totalEquity: currentEquity,
     });
     periodData.endEquity = currentEquity; // Update the end equity for the period
+    // Track the max and min equity within the period
+    if (currentEquity.greaterThan(periodData.maxEquity)) {
+      periodData.maxEquity = currentEquity;
+    }
+    if (currentEquity.lessThan(periodData.minEquity)) {
+      periodData.minEquity = currentEquity;
+    }
+
     periodStartEquity = currentEquity; // Update the start equity for the next period
   }
 
@@ -428,6 +438,10 @@ export const processData2 = (
     let profitFactor = totalProfit.dividedBy(totalLoss.abs()).toNumber();
     let percentProfitable = (winningTrades / totalTrades) * 100;
 
+    // Calculate max runup and max drawdown
+    const maxRunup = periodData.maxEquity.minus(periodData.startEquity);
+    const maxDrawdown = periodData.startEquity.minus(periodData.minEquity);
+
     report.push({
       period: periodKey,
       netProfit: totalProfit.toFixed(2),
@@ -438,6 +452,8 @@ export const processData2 = (
       percentProfitable: percentProfitable.toFixed(2) + "%",
       startEquity: periodData.startEquity.toFixed(2),
       endEquity: periodData.endEquity.toFixed(2),
+      maxRunup: maxRunup.toFixed(2), // Added max runup
+      maxDrawdown: maxDrawdown.toFixed(2), // Added max drawdown
       year: periodData.year,
       month: periodData.month,
       day: periodData.day,

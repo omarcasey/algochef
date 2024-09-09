@@ -29,6 +29,8 @@ import TradeList from "@/components/strategyPage/TradeList";
 import StrategyInfo from "@/components/strategyPage/StrategyInfo";
 import StrategyConfig from "@/components/strategyPage/StrategyConfig";
 import { GoSidebarCollapse } from "react-icons/go";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 
 const StrategyPage = () => {
   const params = useParams<{ id: string }>();
@@ -198,6 +200,10 @@ const StrategyPage = () => {
               Trades
             </p>
           </Button>
+          <div className="flex items-center space-x-2 ml-3 !mt-10">
+            <Switch id="airplane-mode" />
+            <Label htmlFor="airplane-mode">Data in $ / %</Label>
+          </div>
         </div>
         <ScrollArea className="flex-1 rounded-md bg-slate-50 dark:bg-black">
           <div className="p-6">
@@ -207,8 +213,8 @@ const StrategyPage = () => {
           <div id="summary" ref={sectionRefs.summary} className="p-6 space-y-8">
             <Summary strategy={strategy} />
             <PortfolioGrowth strategy={strategy} />
-            {/* <Drawdowns strategy={strategy} /> */}
-            <DrawdownDollar strategy={strategy} />
+            <Drawdowns strategy={strategy} />
+            {/* <DrawdownDollar strategy={strategy} /> */}
             <AnnualReturnsGraph strategy={strategy} />
             <MonthlyReturnsGraph strategy={strategy} />
             <TrailingReturns />

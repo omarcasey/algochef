@@ -1,20 +1,22 @@
 import React from "react";
 import {
-    BarChart,
-    Bar,
-    XAxis,
-    YAxis,
-    Tooltip,
-    CartesianGrid,
-    ResponsiveContainer,
-  } from "recharts";
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  Tooltip,
+  CartesianGrid,
+  ResponsiveContainer,
+  Legend,
+} from "recharts";
 
 const MonthlyReturnsGraph = ({ strategy }) => {
   // Transform the strategy data into a format suitable for Recharts
-  const data = strategy.monthlyReturns.map(({ period, netProfit }) => ({
+  const data = strategy.monthlyReturns.map(({ period, netProfit, maxRunup, maxDrawdown }) => ({
     period,
     netProfit: parseFloat(netProfit), // Convert string to float
-    Benchmark: parseFloat(netProfit) * 0.5,
+    maxRunup: parseFloat(maxRunup), // Positive part of run-up
+    maxDrawdown: -parseFloat(maxDrawdown), // Negative part of drawdown
   }));
 
   return (
@@ -26,6 +28,7 @@ const MonthlyReturnsGraph = ({ strategy }) => {
         <BarChart
           data={data}
           margin={{ left: 15 }} // Adjust margins
+          stackOffset="sign" // Stacks the bars relative to the base line (0)
         >
           <CartesianGrid vertical={false} />
           <XAxis dataKey="period" />
@@ -40,8 +43,10 @@ const MonthlyReturnsGraph = ({ strategy }) => {
             formatter={(value) => `$${value.toLocaleString()}`}
             cursor={{ fill: "transparent" }} // Remove overlay on hover
           />
-          <Bar dataKey="netProfit" fill="#097EF2" />
-          {/* <Bar dataKey="Benchmark" fill="#50E2B0" /> */}
+          <Legend verticalAlign="top" height={36} />
+          <Bar dataKey="netProfit" stackId="a" fill="#097EF2" name="Net Profit" />
+          <Bar dataKey="maxRunup" stackId="a" fill="#50E2B0" name="Max Run-up" />
+          <Bar dataKey="maxDrawdown" stackId="a" fill="#F95F62" name="Max Drawdown" />
         </BarChart>
       </ResponsiveContainer>
     </div>
