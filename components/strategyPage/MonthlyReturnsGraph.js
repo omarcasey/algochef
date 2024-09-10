@@ -45,22 +45,21 @@ const MonthlyReturnsGraph = ({ strategy }) => {
               {`Net Profit: $${payload[0].value}`}
             </p>
           </div>
-          {payload[1].value > 0 && (
-            <div className="flex flex-row items-center mt-2">
-              <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-2" />
-              <p className="text-green-500 font-semibold text-xs">
-                {`Max Runup: $${payload[1].value}`}
-              </p>
-            </div>
-          )}
-          {payload[2].value < 0 && (
-            <div className="flex flex-row items-center">
-              <div className="w-1.5 h-1.5 bg-red-500 rounded-full mr-2" />
-              <p className="text-red-500 font-semibold text-xs">
-                {`Max Drawdown: $${payload[2].value}`}
-              </p>
-            </div>
-          )}
+
+          <div className="flex flex-row items-center mt-2">
+            <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-2" />
+            <p className="text-green-500 font-semibold text-xs">
+              {`Max Runup: $${payload[1].value}`}
+            </p>
+          </div>
+
+          <div className="flex flex-row items-center">
+            <div className="w-1.5 h-1.5 bg-red-500 rounded-full mr-2" />
+            <p className="text-red-500 font-semibold text-xs">
+              {`Max Drawdown: $${payload[2].value}`}
+            </p>
+          </div>
+
         </div>
       );
     }
@@ -98,7 +97,7 @@ const MonthlyReturnsGraph = ({ strategy }) => {
           <Tooltip
             content={<CustomTooltip />} // Use the custom tooltip
           />
-          <Legend verticalAlign="top" height={36} />
+          {/* <Legend verticalAlign="top" height={36} /> */}
           <Bar
             dataKey="netProfit"
             stackId="a"
