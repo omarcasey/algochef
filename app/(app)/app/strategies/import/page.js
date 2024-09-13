@@ -45,8 +45,10 @@ import {
 import { useFirestore, useFirestoreCollectionData, useUser } from "reactfire";
 import { useToast } from "@/components/ui/use-toast";
 import {
+  calculateTradeDistribution,
   processData,
   processData2,
+  processData3,
 } from "@/components/processing/dataProcessing";
 import { useRouter } from "next/navigation";
 
@@ -370,7 +372,9 @@ const Import = () => {
       const annualReturns = processData2(columnLabels, data, 10000, "year", selectedPositionType);
       const monthlyReturns = processData2(columnLabels, data, 10000, "month", selectedPositionType);
       // const weeklyReturns = processData2(columnLabels, data, 10000, "week", selectedPositionType);
-      // const dailyReturns = processData2(columnLabels, data, 10000, "day", selectedPositionType);
+      const dailyReturns = processData2(columnLabels, data, 10000, "day", selectedPositionType);
+      const monthlyAnalysis = processData3(columnLabels, data, 10000, "day", selectedPositionType);
+      const tradeDistribution = calculateTradeDistribution(columnLabels, data, selectedPositionType);
 
       // Add a new document with a generated ID and strategy name.
       const strategyDoc = await addDoc(collection(firestore, "strategies"), {
@@ -382,7 +386,9 @@ const Import = () => {
         annualReturns: annualReturns,
         monthlyReturns: monthlyReturns,
         // weeklyReturns: weeklyReturns,
-        // dailyReturns: dailyReturns,
+        dailyReturns: dailyReturns,
+        monthlyAnalysis: monthlyAnalysis,
+        tradeDistribution: tradeDistribution,
         columnLabels: columnLabels,
         data: data.map((row, index) => ({ row })),
         positionTypes: selectedPositionType,

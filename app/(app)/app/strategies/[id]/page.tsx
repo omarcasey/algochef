@@ -28,6 +28,11 @@ import TradingPerformance from "@/components/strategyPage/TradingPerformance";
 import TradeList from "@/components/strategyPage/TradeList";
 import StrategyInfo from "@/components/strategyPage/StrategyInfo";
 import StrategyConfig from "@/components/strategyPage/StrategyConfig";
+import MonthlyNetProfitGraph from "@/components/strategyPage/MonthlyNetProfitGraph";
+import DailyNetProfitGraph from "@/components/strategyPage/DailyNetProfitGraph";
+import MonthlyAnalysis from "@/components/strategyPage/MonthlyAnalysis";
+import TradeDistribution from "@/components/strategyPage/TradeDistribution";
+import BiggestDrawdowns from "@/components/strategyPage/BiggestDrawdowns";
 import { GoSidebarCollapse } from "react-icons/go";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -217,6 +222,10 @@ const StrategyPage = () => {
             {/* <DrawdownDollar strategy={strategy} /> */}
             <AnnualReturnsGraph strategy={strategy} />
             <MonthlyReturnsGraph strategy={strategy} />
+            <MonthlyNetProfitGraph strategy={strategy} />
+            <DailyNetProfitGraph strategy={strategy} />
+            <MonthlyAnalysis strategy={strategy} />
+            <TradeDistribution strategy={strategy} />
             <TrailingReturns />
           </div>
           <div
@@ -247,7 +256,9 @@ const StrategyPage = () => {
             id="drawdowns"
             ref={sectionRefs.drawdowns}
             className="p-6 space-y-8"
-          ></div>
+          >
+            <BiggestDrawdowns strategy={strategy} />
+          </div>
           <div
             id="rollingreturns"
             ref={sectionRefs.rollingreturns}

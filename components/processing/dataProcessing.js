@@ -474,3 +474,223 @@ export const processData2 = (
 
   return report;
 };
+
+export const processData3 = (
+  columnLabels,
+  data,
+  initialEquity,
+  period,
+  positionTypes
+) => {
+  const columns = Object.values(columnLabels);
+  const rows = data;
+
+  if (!rows.length) {
+    console.error("No data found in the CSV file.");
+    return [];
+  }
+
+  // Sort rows by exit date in ascending order
+  rows.sort((a, b) => {
+    const dateA = new Date(a[columns.indexOf("Exit Date")]);
+    const dateB = new Date(b[columns.indexOf("Exit Date")]);
+    return dateA - dateB;
+  });
+
+  let tradesByMonth = new Map();
+  let currentEquity = new Decimal(initialEquity);
+
+  for (let index = 0; index < rows.length; index++) {
+    const row = rows[index];
+    const entryPrice = new Decimal(row[columns.indexOf("Entry Price")]);
+    const exitPrice = new Decimal(row[columns.indexOf("Exit Price")]);
+    const sizeIndex = columns.indexOf("Size");
+    const size = sizeIndex !== -1 ? parseInt(row[sizeIndex]) : 1;
+
+    let profit;
+
+    if (positionTypes === "long") {
+      profit = exitPrice.minus(entryPrice).times(size);
+    } else if (positionTypes === "short") {
+      profit = entryPrice.minus(exitPrice).times(size);
+    } else if (positionTypes === "both") {
+      const positionType = row[columns.indexOf("Long/Short")].toLowerCase();
+      if (positionType === "long") {
+        profit = exitPrice.minus(entryPrice).times(size);
+      } else if (positionType === "short") {
+        profit = entryPrice.minus(exitPrice).times(size);
+      } else {
+        console.warn(
+          `Unknown position type '${positionType}' in row ${index + 1}`
+        );
+        continue;
+      }
+    } else {
+      console.error(`Invalid positionTypes value '${positionTypes}'`);
+      return [];
+    }
+
+    currentEquity = currentEquity.plus(profit);
+
+    const exitDate = new Date(row[columns.indexOf("Exit Date")]);
+    const monthName = exitDate.toLocaleString("default", { month: "long" }); // Extract only the month name
+
+    if (!tradesByMonth.has(monthName)) {
+      tradesByMonth.set(monthName, {
+        trades: [],
+        totalProfit: new Decimal(0),
+        totalLoss: new Decimal(0),
+        totalTrades: 0,
+        winningTrades: 0,
+      });
+    }
+
+    const monthData = tradesByMonth.get(monthName);
+    monthData.trades.push(profit);
+    monthData.totalTrades += 1;
+
+    if (profit.isNegative()) {
+      monthData.totalLoss = monthData.totalLoss.plus(profit.abs());
+    } else {
+      monthData.totalProfit = monthData.totalProfit.plus(profit);
+      monthData.winningTrades += 1;
+    }
+  }
+
+  let report = [];
+
+  for (let [monthName, monthData] of tradesByMonth) {
+    const averageProfit = monthData.totalProfit
+      .minus(monthData.totalLoss)
+      .dividedBy(monthData.totalTrades)
+      .toFixed(2);
+    const netProfit = monthData.totalProfit
+      .minus(monthData.totalLoss)
+      .toFixed(2);
+    const profitFactor = monthData.totalLoss.isZero()
+      ? "Infinity"
+      : monthData.totalProfit.dividedBy(monthData.totalLoss).toFixed(2);
+    const percentProfitable = (
+      (monthData.winningTrades / monthData.totalTrades) *
+      100
+    ).toFixed(1);
+
+    report.push({
+      period: monthName,
+      averageProfit: `$${averageProfit}`,
+      grossProfit: `$${monthData.totalProfit.toFixed(2)}`,
+      grossLoss: `($${monthData.totalLoss.toFixed(2)})`,
+      netProfit: `$${netProfit}`,
+      profitFactor: profitFactor,
+      averageTrades: monthData.totalTrades.toFixed(1),
+      percentProfitable: `${percentProfitable}%`,
+    });
+  }
+
+  // Ensure report has all months in order from January to December
+  const orderedMonths = [
+    "January",
+    "February",
+    "March",
+    "April",
+    "May",
+    "June",
+    "July",
+    "August",
+    "September",
+    "October",
+    "November",
+    "December",
+  ];
+
+  return orderedMonths.map(
+    (month) =>
+      report.find((r) => r.period === month) || {
+        period: month,
+        averageProfit: "$0.00",
+        grossProfit: "$0.00",
+        grossLoss: "($0.00)",
+        netProfit: "$0.00",
+        profitFactor: "0.00",
+        averageTrades: "0.0",
+        percentProfitable: "0.0%",
+      }
+  );
+};
+
+export const calculateTradeDistribution = (columnLabels, data, positionTypes) => {
+  const columns = Object.values(columnLabels);
+  const rows = data;
+
+  if (!rows.length) {
+    console.error("No data found in the CSV file.");
+    return [];
+  }
+
+  let trades = [];
+
+  for (let index = 0; index < rows.length; index++) {
+    const row = rows[index];
+    const entryPrice = new Decimal(row[columns.indexOf("Entry Price")]);
+    const exitPrice = new Decimal(row[columns.indexOf("Exit Price")]);
+    const sizeIndex = columns.indexOf("Size");
+    const size = sizeIndex !== -1 ? parseInt(row[sizeIndex]) : 1;
+
+    let profit;
+
+    if (positionTypes === "long") {
+      profit = exitPrice.minus(entryPrice).times(size);
+    } else if (positionTypes === "short") {
+      profit = entryPrice.minus(exitPrice).times(size);
+    } else if (positionTypes === "both") {
+      const positionType = row[columns.indexOf("Long/Short")].toLowerCase();
+      if (positionType === "long") {
+        profit = exitPrice.minus(entryPrice).times(size);
+      } else if (positionType === "short") {
+        profit = entryPrice.minus(exitPrice).times(size);
+      } else {
+        console.warn(`Unknown position type '${positionType}' in row ${index + 1}`);
+        continue;
+      }
+    } else {
+      console.error(`Invalid positionTypes value '${positionTypes}'`);
+      return [];
+    }
+
+    trades.push(profit.toNumber());
+  }
+
+  if (trades.length === 0) {
+    return [];
+  }
+
+  // Calculate mean and standard deviation using mathjs
+  const tradeMean = mean(trades);
+  const tradeStdDev = std(trades);
+
+  // Define automatic bin ranges based on mean and standard deviation
+  const numBins = 10;
+  const rangeWidth = 2 * tradeStdDev;
+  const minRange = Math.min(...trades);
+  const maxRange = Math.max(...trades);
+  
+  const bins = [];
+  for (let i = 0; i < numBins; i++) {
+    const min = tradeMean - rangeWidth + i * (rangeWidth / numBins);
+    const max = min + rangeWidth / numBins;
+    bins.push({ min, max });
+  }
+
+  // Calculate the frequency of trades in each bin
+  const distribution = bins.map(bin => ({
+    range: `$${Math.round(bin.min)} - $${Math.round(bin.max)}`,
+    count: trades.filter(trade => trade >= bin.min && trade < bin.max).length,
+  }));
+
+  return {
+    distribution,
+    mean: tradeMean,
+    stdDev: tradeStdDev,
+  };
+};
+
