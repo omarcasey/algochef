@@ -1,5 +1,96 @@
 import Decimal from "decimal.js";
+import { Timestamp } from "firebase/firestore";
 import { mean, std } from "mathjs";
+
+export const processTradeData = (columnLabels, data, positionTypes) => {
+  const columns = Object.values(columnLabels);
+  const rows = data;
+
+  if (!rows.length) {
+    console.error("No data found.");
+    return [];
+  }
+
+  const combineDateAndTime = (dateStr, timeStr) => {
+    if (!dateStr) return null;
+    const [month, day, year] = dateStr.split('/').map(num => parseInt(num, 10));
+    let hours = 0, minutes = 0;
+    if (timeStr) {
+      let [time, period] = timeStr.split(' ');
+      [hours, minutes] = time.split(':').map(num => parseInt(num, 10));
+      if (period.toLowerCase() === 'pm' && hours !== 12) hours += 12;
+      if (period.toLowerCase() === 'am' && hours === 12) hours = 0;
+    }
+    return new Date(year, month - 1, day, hours, minutes);
+  };
+
+  const processedTrades = rows.map(row => {
+    const entryDateStr = row[columns.indexOf("Entry Date")];
+    const exitDateStr = row[columns.indexOf("Exit Date")];
+    const entryTimeStr = columns.includes("Entry Time") ? row[columns.indexOf("Entry Time")] : null;
+    const exitTimeStr = columns.includes("Exit Time") ? row[columns.indexOf("Exit Time")] : null;
+
+    const entryDate = combineDateAndTime(entryDateStr, entryTimeStr);
+    const exitDate = combineDateAndTime(exitDateStr, exitTimeStr);
+
+    if (!entryDate || !exitDate) {
+      console.error("Invalid date format", { entryDateStr, exitDateStr, entryTimeStr, exitTimeStr });
+      return null;
+    }
+
+    const entryPrice = parseFloat(row[columns.indexOf("Entry Price")]);
+    const exitPrice = parseFloat(row[columns.indexOf("Exit Price")]);
+    const size = parseInt(row[columns.indexOf("Size")]) || 1;
+
+    let positionType;
+    let netProfit;
+
+    if (positionTypes === "long") {
+      positionType = "long";
+      netProfit = (exitPrice - entryPrice) * size;
+    } else if (positionTypes === "short") {
+      positionType = "short";
+      netProfit = (entryPrice - exitPrice) * size;
+    } else if (positionTypes === "both") {
+      const longShortIndex = columns.indexOf("Long/Short");
+      if (longShortIndex === -1) {
+        console.error("Long/Short column not found when positionTypes is 'both'");
+        return null;
+      }
+      positionType = row[longShortIndex].toLowerCase();
+      if (positionType === "long") {
+        netProfit = (exitPrice - entryPrice) * size;
+      } else if (positionType === "short") {
+        netProfit = (entryPrice - exitPrice) * size;
+      } else {
+        console.warn(`Unknown position type '${positionType}'`);
+        return null;
+      }
+    } else {
+      console.error(`Invalid positionTypes value '${positionTypes}'`);
+      return null;
+    }
+
+    return {
+      entryDate: Timestamp.fromDate(entryDate),
+      entryTime: entryTimeStr,
+      entryPrice,
+      exitDate: Timestamp.fromDate(exitDate),
+      exitTime: exitTimeStr,
+      exitPrice,
+      exitYear: exitDate.getFullYear(),
+      exitMonth: exitDate.getMonth() + 1,
+      exitDay: exitDate.getDate(),
+      size,
+      positionType,
+      netProfit,
+      timestamp: Timestamp.fromDate(exitDate)
+    };
+  }).filter(trade => trade !== null);
+
+  // Sort the processed trades by exit date (oldest to newest)
+  return processedTrades.sort((a, b) => a.exitDate.toDate() - b.exitDate.toDate());
+};
 
 export const processData = (
   columnLabels,

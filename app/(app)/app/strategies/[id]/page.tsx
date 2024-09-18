@@ -205,10 +205,48 @@ const StrategyPage = () => {
               Trades
             </p>
           </Button>
-          <div className="flex items-center space-x-2 ml-3 !mt-10">
-            <Switch className="data-[state=checked]:bg-blue-500"  id="$/%" />
-            <Label htmlFor="$/%">Data in $ / %</Label>
-          </div>
+          {isExpanded && (
+            <>
+              <p className="!mt-10 text-sm">Plot by</p>
+              <div className="flex items-center !mt-3 border rounded-md px-3 py-2 w-full justify-between">
+                <Label htmlFor="plotByTrade" className="text-xs">
+                  Trade
+                </Label>
+                <Switch
+                  className="data-[state=checked]:bg-blue-500"
+                  id="plotByTrade"
+                />
+              </div>
+              <div className="flex items-center !mt-1.5 border rounded-md px-3 py-2 w-full justify-between">
+                <Label htmlFor="plotByTime" className="text-xs">
+                  Time
+                </Label>
+                <Switch
+                  className="data-[state=checked]:bg-blue-500"
+                  id="plotByTime"
+                />
+              </div>
+              <p className="!mt-8 text-sm">Data in</p>
+              <div className="flex items-center !mt-3 border rounded-md px-3 py-2 w-full justify-between">
+                <Label htmlFor="dataInDollar" className="text-xs">
+                  Dollars $
+                </Label>
+                <Switch
+                  className="data-[state=checked]:bg-blue-500"
+                  id="dataInDollar"
+                />
+              </div>
+              <div className="flex items-center !mt-1.5 border rounded-md px-3 py-2 w-full justify-between">
+                <Label htmlFor="dataInPercent" className="text-xs">
+                  Percentage %
+                </Label>
+                <Switch
+                  className="data-[state=checked]:bg-blue-500"
+                  id="dataInPercent"
+                />
+              </div>
+            </>
+          )}
         </div>
         <ScrollArea className="flex-1 rounded-md bg-slate-50 dark:bg-black">
           <div className="p-6">

@@ -41,6 +41,7 @@ import {
   deleteDoc,
   doc,
   Timestamp,
+  writeBatch,
 } from "firebase/firestore";
 import { useFirestore, useFirestoreCollectionData, useUser } from "reactfire";
 import { useToast } from "@/components/ui/use-toast";
@@ -49,6 +50,7 @@ import {
   processData,
   processData2,
   processData3,
+  processTradeData,
 } from "@/components/processing/dataProcessing";
 import { useRouter } from "next/navigation";
 
@@ -333,74 +335,138 @@ const Import = () => {
         return;
       }
 
-      if (!selectedInstrument) {
+      if (!selectedInstrument || !selectedTimeframe || !selectedPositionType) {
         toast({
           variant: "destructive",
           title: "Uh oh! Something went wrong.",
           description:
-            "Error: You must select an instrument.",
+            "Error: You must select an instrument, timeframe, and position type.",
         });
         return;
       }
 
-      if (!selectedTimeframe) {
+      // Process trade data
+      const trades = processTradeData(columnLabels, data, selectedPositionType);
+
+      if (trades.length === 0) {
         toast({
           variant: "destructive",
-          title: "Uh oh! Something went wrong.",
-          description:
-            "Error: You must select a timeframe.",
+          title: "No valid trades found",
+          description: "Please check your data and try again.",
         });
         return;
       }
 
-      if (!selectedPositionType) {
-        toast({
-          variant: "destructive",
-          title: "Uh oh! Something went wrong.",
-          description:
-            "Error: You must select a position type or specifiy the 'Long/Short' column.",
-        });
-        return;
-      }
+      // Calculate metrics
+      // const metrics = calculateMetrics(trades, initialCapital);
+      // const { annualReturns, monthlyReturns } = calculateReturns(
+      //   trades,
+      //   initialCapital
+      // );
+      // const tradeDistribution = calculateTradeDistribution(trades);
 
-      // Assuming you want to process the data for import
-      // For example, logging the data or performing any actions with it
-      console.log("Importing data with labels:", columnLabels);
-      console.log("Data to import:", data);
-
-      const result = processData(columnLabels, data, 10000, selectedPositionType);
-      const annualReturns = processData2(columnLabels, data, 10000, "year", selectedPositionType);
-      const monthlyReturns = processData2(columnLabels, data, 10000, "month", selectedPositionType);
-      // const weeklyReturns = processData2(columnLabels, data, 10000, "week", selectedPositionType);
-      const dailyReturns = processData2(columnLabels, data, 10000, "day", selectedPositionType);
-      const monthlyAnalysis = processData3(columnLabels, data, 10000, "day", selectedPositionType);
-      const tradeDistribution = calculateTradeDistribution(columnLabels, data, selectedPositionType);
-
-      // Add a new document with a generated ID and strategy name.
+      // Create a new strategy document with pre-calculated metrics
       const strategyDoc = await addDoc(collection(firestore, "strategies"), {
         name: strategyName,
-        metrics: result.metrics,
-        equityCurveData: result.equityCurveData,
         createdAt: Timestamp.now(),
         userId: user.uid,
-        annualReturns: annualReturns,
-        monthlyReturns: monthlyReturns,
-        // weeklyReturns: weeklyReturns,
-        dailyReturns: dailyReturns,
-        monthlyAnalysis: monthlyAnalysis,
-        tradeDistribution: tradeDistribution,
-        columnLabels: columnLabels,
-        data: data.map((row, index) => ({ row })),
-        positionTypes: selectedPositionType,
-        // include any other relevant fields here
+        instrument: selectedInstrument,
+        timeframe: selectedTimeframe,
+        positionType: selectedPositionType,
+        // metrics: metrics,
+        // annualReturns: annualReturns,
+        // monthlyReturns: monthlyReturns,
+        // tradeDistribution: tradeDistribution,
       });
+
+      // Use a batch write to add all trades
+      const batch = writeBatch(firestore);
+      const tradesCollection = collection(
+        firestore,
+        `strategies/${strategyDoc.id}/trades`
+      );
+
+      trades.forEach((trade, index) => {
+        const tradeDoc = doc(tradesCollection);
+        batch.set(tradeDoc, { ...trade, order: index });
+      });
+
+      await batch.commit();
 
       toast({
         title: "Data imported successfully!",
+        description: `${trades.length} trades imported.`,
       });
 
       // Redirect to strategy page
       router.push(`/app/strategies/${strategyDoc.id}`);
+
+      // const result = processData(
+      //   columnLabels,
+      //   data,
+      //   10000,
+      //   selectedPositionType
+      // );
+      // const annualReturns = processData2(
+      //   columnLabels,
+      //   data,
+      //   10000,
+      //   "year",
+      //   selectedPositionType
+      // );
+      // const monthlyReturns = processData2(
+      //   columnLabels,
+      //   data,
+      //   10000,
+      //   "month",
+      //   selectedPositionType
+      // );
+      // const weeklyReturns = processData2(columnLabels, data, 10000, "week", selectedPositionType);
+      // const dailyReturns = processData2(
+      //   columnLabels,
+      //   data,
+      //   10000,
+      //   "day",
+      //   selectedPositionType
+      // );
+      // const monthlyAnalysis = processData3(
+      //   columnLabels,
+      //   data,
+      //   10000,
+      //   "day",
+      //   selectedPositionType
+      // );
+      // const tradeDistribution = calculateTradeDistribution(
+      //   columnLabels,
+      //   data,
+      //   selectedPositionType
+      // );
+
+      // Add a new document with a generated ID and strategy name.
+      // const strategyDoc = await addDoc(collection(firestore, "strategies"), {
+      //   name: strategyName,
+      //   metrics: result.metrics,
+      //   equityCurveData: result.equityCurveData,
+      //   createdAt: Timestamp.now(),
+      //   userId: user.uid,
+      //   annualReturns: annualReturns,
+      //   monthlyReturns: monthlyReturns,
+      //   // weeklyReturns: weeklyReturns,
+      //   dailyReturns: dailyReturns,
+      //   monthlyAnalysis: monthlyAnalysis,
+      //   tradeDistribution: tradeDistribution,
+      //   columnLabels: columnLabels,
+      //   data: data.map((row, index) => ({ row })),
+      //   positionTypes: selectedPositionType,
+      //   // include any other relevant fields here
+      // });
+
+      // toast({
+      //   title: "Data imported successfully!",
+      // });
+
+      // // Redirect to strategy page
+      // router.push(`/app/strategies/${strategyDoc.id}`);
     } catch (error) {
       console.error("Import error:", error.message);
       toast({
@@ -510,22 +576,24 @@ const Import = () => {
                   <SelectLabel>Select Position Type</SelectLabel>
                   <SelectItem value="long">Long</SelectItem>
                   <SelectItem value="short">Short</SelectItem>
-                  <SelectItem value="both" className="hidden">Both</SelectItem>
+                  <SelectItem value="both" className="hidden">
+                    Both
+                  </SelectItem>
                 </SelectGroup>
               </SelectContent>
             </Select>
             <div className="flex flex-row items-center cursor-pointer">
-                <Checkbox
-                  id="comission"
-                  className="mr-1 ml-4"
-                  // checked={delimiters.tab}
-                  // onCheckedChange={handleDelimiterChange("tab")}
-                  disabled={loading}
-                />
-                <Label className="cursor-pointer" htmlFor="comission">
-                  Subtract Comission & Slippage
-                </Label>
-              </div>
+              <Checkbox
+                id="comission"
+                className="mr-1 ml-4"
+                // checked={delimiters.tab}
+                // onCheckedChange={handleDelimiterChange("tab")}
+                disabled={loading}
+              />
+              <Label className="cursor-pointer" htmlFor="comission">
+                Subtract Comission & Slippage
+              </Label>
+            </div>
             <Select
               value={selectedFormat}
               onValueChange={(value) => handleFormatSelect(value)}
