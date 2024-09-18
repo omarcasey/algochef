@@ -51,6 +51,7 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "../ui/resizable";
+import numeral from "numeral";
 
 const UserStrategies = () => {
   const { data: user, status } = useUser();
@@ -71,6 +72,25 @@ const UserStrategies = () => {
 
   const [currentPage, setCurrentPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(12);
+
+  const [checkedItems, setCheckedItems] = useState({
+    netProfit: false,
+    maxDrawdown: false,
+    returnDrawdownRatio: false,
+    noOfTrades: false,
+    longShort: false,
+  });
+
+  const handleItemClick = (key) => {
+    setCheckedItems((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
+  const handleItemSelect = (e) => {
+    e.preventDefault();
+  };
 
   // Add new state variables for sorting
   const [sortConfig, setSortConfig] = useState({ key: null, direction: "asc" });
@@ -245,7 +265,7 @@ const UserStrategies = () => {
               </TableHead>
               <TableHead
                 onClick={() => handleSort("name")}
-                className="cursor-pointer w-1/3"
+                className="cursor-pointer"
               >
                 Name{" "}
                 {sortConfig.key === "name"
@@ -267,6 +287,11 @@ const UserStrategies = () => {
                   : ""}
               </TableHead>
               <TableHead>Type</TableHead>
+              {checkedItems.netProfit && <TableHead>Net Profit</TableHead>}
+              {checkedItems.maxDrawdown && <TableHead>Max Drawdown</TableHead>}
+              {checkedItems.returnDrawdownRatio && <TableHead>Return / Drawdown Ratio</TableHead>}
+              {checkedItems.noOfTrades && <TableHead>No. of Trades</TableHead>}
+              {checkedItems.longShort && <TableHead>Long / Short</TableHead>}
               <TableHead className="pr-0">
                 <div className="flex flex-row items-center justify-between h-full">
                   <p>Actions</p>
@@ -279,22 +304,60 @@ const UserStrategies = () => {
                     <DropdownMenuContent>
                       <DropdownMenuLabel>Columns</DropdownMenuLabel>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem className="flex items-center">
-                        <Checkbox className="w-3.5 h-3.5 mr-2" /> Net Profit $
+                      <DropdownMenuItem
+                        onSelect={handleItemSelect}
+                        onClick={() => handleItemClick("netProfit")}
+                        className="flex items-center"
+                      >
+                        <Checkbox
+                          checked={checkedItems.netProfit}
+                          className="w-3.5 h-3.5 mr-2"
+                        />
+                        Net Profit $
                       </DropdownMenuItem>
-                      <DropdownMenuItem className="flex items-center">
-                        <Checkbox className="w-3.5 h-3.5 mr-2" /> Maximum
-                        Drawdown $
+                      <DropdownMenuItem
+                        onSelect={handleItemSelect}
+                        onClick={() => handleItemClick("maxDrawdown")}
+                        className="flex items-center"
+                      >
+                        <Checkbox
+                          checked={checkedItems.maxDrawdown}
+                          className="w-3.5 h-3.5 mr-2"
+                        />
+                        Maximum Drawdown $
                       </DropdownMenuItem>
-                      <DropdownMenuItem className="flex items-center">
-                        <Checkbox className="w-3.5 h-3.5 mr-2" /> Return /
-                        Drawdown Ratio
+                      <DropdownMenuItem
+                        onSelect={handleItemSelect}
+                        onClick={() => handleItemClick("returnDrawdownRatio")}
+                        className="flex items-center"
+                      >
+                        <Checkbox
+                          checked={checkedItems.returnDrawdownRatio}
+                          className="w-3.5 h-3.5 mr-2"
+                        />
+                        Return / Drawdown Ratio
                       </DropdownMenuItem>
-                      <DropdownMenuItem className="flex items-center">
-                        <Checkbox className="w-3.5 h-3.5 mr-2" /> No. of Trades
+                      <DropdownMenuItem
+                        onSelect={handleItemSelect}
+                        onClick={() => handleItemClick("noOfTrades")}
+                        className="flex items-center"
+                      >
+                        <Checkbox
+                          checked={checkedItems.noOfTrades}
+                          className="w-3.5 h-3.5 mr-2"
+                        />
+                        No. of Trades
                       </DropdownMenuItem>
-                      <DropdownMenuItem className="flex items-center">
-                        <Checkbox className="w-3.5 h-3.5 mr-2" /> Long / Short
+                      <DropdownMenuItem
+                        onSelect={handleItemSelect}
+                        onClick={() => handleItemClick("longShort")}
+                        className="flex items-center"
+                      >
+                        <Checkbox
+                          checked={checkedItems.longShort}
+                          className="w-3.5 h-3.5 mr-2"
+                        />
+                        Long / Short
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
@@ -337,6 +400,31 @@ const UserStrategies = () => {
                       Future
                     </div>
                   </TableCell>
+                  {checkedItems.netProfit && (
+                    <TableCell>
+                      {numeral(strategy.metrics["Total Net Profit"]).format("$0,0")}
+                    </TableCell>
+                  )}
+                  {checkedItems.maxDrawdown && (
+                    <TableCell>
+                      {numeral(strategy.metrics["Max Drawdown $"]).format("$0,0")}
+                    </TableCell>
+                  )}
+                  {checkedItems.returnDrawdownRatio && (
+                    <TableCell>
+                      {/* {numeral(strategy.metrics["Total Net Profit"]).format("$0,0")} */}
+                    </TableCell>
+                  )}
+                  {checkedItems.noOfTrades && (
+                    <TableCell>
+                      {strategy.metrics["Total Trades"]}
+                    </TableCell>
+                  )}
+                  {checkedItems.longShort && (
+                    <TableCell>
+                      {strategy.positionTypes}
+                    </TableCell>
+                  )}
                   <TableCell>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
