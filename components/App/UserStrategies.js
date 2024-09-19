@@ -11,6 +11,7 @@ import {
   doc,
   deleteDoc,
   updateDoc,
+  orderBy,
 } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -42,15 +43,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { LoadingSpinner } from "../ui/spinner";
-import { ChevronDown, Loader2, MoreHorizontal, Plus } from "lucide-react";
+import { Loader2, MoreHorizontal, Plus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { FaPlus } from "react-icons/fa";
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "../ui/resizable";
 import numeral from "numeral";
 
 const UserStrategies = () => {
@@ -98,7 +93,8 @@ const UserStrategies = () => {
   // Create a query to filter strategies by userId
   const strategiesQuery = query(
     collection(firestore, "strategies"),
-    where("userId", "==", user ? user.uid : "")
+    where("userId", "==", user ? user.uid : ""),
+    orderBy("createdAt", "desc")
   );
 
   // Fetch strategies using Reactfire
@@ -186,14 +182,34 @@ const UserStrategies = () => {
 
   const sortedStrategies = [...filteredStrategies].sort((a, b) => {
     if (sortConfig.key) {
-      const aValue =
-        sortConfig.key === "createdAt"
-          ? a[sortConfig.key].seconds
-          : a[sortConfig.key].toLowerCase();
-      const bValue =
-        sortConfig.key === "createdAt"
-          ? b[sortConfig.key].seconds
-          : b[sortConfig.key].toLowerCase();
+      let aValue, bValue;
+
+      switch (sortConfig.key) {
+        case "createdAt":
+          aValue = a[sortConfig.key].seconds;
+          bValue = b[sortConfig.key].seconds;
+          break;
+        case "netProfit":
+          aValue = a.metrics?.["Total Net Profit"] || 0;
+          bValue = b.metrics?.["Total Net Profit"] || 0;
+          break;
+        case "maxDrawdown":
+          aValue = a.metrics?.["Max Drawdown $"] || 0;
+          bValue = b.metrics?.["Max Drawdown $"] || 0;
+          break;
+        case "noOfTrades":
+          aValue = a.metrics?.["Total Trades"] || 0;
+          bValue = b.metrics?.["Total Trades"] || 0;
+          break;
+        case "longShort":
+          aValue = a.positionTypes?.toLowerCase() || "";
+          bValue = b.positionTypes?.toLowerCase() || "";
+          break;
+        default:
+          aValue = a[sortConfig.key]?.toLowerCase();
+          bValue = b[sortConfig.key]?.toLowerCase();
+      }
+
       if (aValue < bValue) {
         return sortConfig.direction === "asc" ? -1 : 1;
       }
@@ -287,11 +303,62 @@ const UserStrategies = () => {
                   : ""}
               </TableHead>
               <TableHead>Type</TableHead>
-              {checkedItems.netProfit && <TableHead>Net Profit</TableHead>}
-              {checkedItems.maxDrawdown && <TableHead>Max Drawdown</TableHead>}
-              {checkedItems.returnDrawdownRatio && <TableHead>Return / Drawdown Ratio</TableHead>}
-              {checkedItems.noOfTrades && <TableHead>No. of Trades</TableHead>}
-              {checkedItems.longShort && <TableHead>Long / Short</TableHead>}
+              {checkedItems.netProfit && (
+                <TableHead
+                  onClick={() => handleSort("netProfit")}
+                  className="cursor-pointer"
+                >
+                  Net Profit{" "}
+                  {sortConfig.key === "netProfit"
+                    ? sortConfig.direction === "asc"
+                      ? "▲"
+                      : "▼"
+                    : ""}
+                </TableHead>
+              )}
+              {checkedItems.maxDrawdown && (
+                <TableHead
+                  onClick={() => handleSort("maxDrawdown")}
+                  className="cursor-pointer"
+                >
+                  Max Drawdown{" "}
+                  {sortConfig.key === "maxDrawdown"
+                    ? sortConfig.direction === "asc"
+                      ? "▲"
+                      : "▼"
+                    : ""}
+                </TableHead>
+              )}
+              {checkedItems.returnDrawdownRatio && (
+                <TableHead>Return / Drawdown Ratio</TableHead>
+              )}
+              {checkedItems.noOfTrades && (
+                <TableHead
+                  onClick={() => handleSort("noOfTrades")}
+                  className="cursor-pointer"
+                >
+                  No. of Trades{" "}
+                  {sortConfig.key === "noOfTrades"
+                    ? sortConfig.direction === "asc"
+                      ? "▲"
+                      : "▼"
+                    : ""}
+                </TableHead>
+              )}
+              {checkedItems.longShort && (
+                <TableHead
+                  onClick={() => handleSort("longShort")}
+                  className="cursor-pointer"
+                >
+                  Long / Short{" "}
+                  {sortConfig.key === "longShort"
+                    ? sortConfig.direction === "asc"
+                      ? "▲"
+                      : "▼"
+                    : ""}
+                </TableHead>
+              )}
+
               <TableHead className="pr-0">
                 <div className="flex flex-row items-center justify-between h-full">
                   <p>Actions</p>
@@ -402,12 +469,48 @@ const UserStrategies = () => {
                   </TableCell>
                   {checkedItems.netProfit && (
                     <TableCell>
-                      {numeral(strategy.metrics["Total Net Profit"]).format("$0,0")}
+                      {(() => {
+                        const profit = strategy.metrics?.["Total Net Profit"];
+                        if (profit === undefined) return "";
+
+                        const isNegative = profit < 0;
+                        const formattedProfit = numeral(
+                          Math.abs(profit)
+                        ).format("$0,0");
+
+                        return (
+                          <p
+                            className={`${
+                              isNegative
+                                ? "text-red-600 dark:text-red-400"
+                                : "text-green-600 dark:text-green-400"
+                            }`}
+                          >
+                            {isNegative
+                              ? `(${formattedProfit})`
+                              : formattedProfit}
+                          </p>
+                        );
+                      })()}
                     </TableCell>
                   )}
                   {checkedItems.maxDrawdown && (
                     <TableCell>
-                      {numeral(strategy.metrics["Max Drawdown $"]).format("$0,0")}
+                      {(() => {
+                        const maxDrawdown =
+                          strategy.metrics?.["Max Drawdown $"];
+                        if (maxDrawdown === undefined) return "";
+
+                        const formattedDrawdown = numeral(
+                          Math.abs(maxDrawdown)
+                        ).format("$0,0");
+
+                        return (
+                          <p className="text-red-600 dark:text-red-400">
+                            ({formattedDrawdown})
+                          </p>
+                        );
+                      })()}
                     </TableCell>
                   )}
                   {checkedItems.returnDrawdownRatio && (
@@ -416,13 +519,26 @@ const UserStrategies = () => {
                     </TableCell>
                   )}
                   {checkedItems.noOfTrades && (
-                    <TableCell>
-                      {strategy.metrics["Total Trades"]}
-                    </TableCell>
+                    <TableCell>{strategy.metrics?.["Total Trades"]}</TableCell>
                   )}
                   {checkedItems.longShort && (
                     <TableCell>
-                      {strategy.positionTypes}
+                      {strategy.positionTypes ? (
+                        <div
+                          className={`font-medium px-2 py-1.5 rounded-md text-xs w-16 flex items-center justify-center ${
+                            strategy.positionTypes.toLowerCase() === "long"
+                              ? "bg-green-200 dark:bg-green-900 text-green-800 dark:text-green-300"
+                              : strategy.positionTypes.toLowerCase() === "short"
+                              ? "bg-blue-200 dark:bg-blue-900 text-blue-800 dark:text-blue-300"
+                              : "bg-orange-200 dark:bg-orange-950 text-orange-800 dark:text-orange-400"
+                          }`}
+                        >
+                          {strategy.positionTypes.charAt(0).toUpperCase() +
+                            strategy.positionTypes.slice(1)}
+                        </div>
+                      ) : (
+                        ""
+                      )}
                     </TableCell>
                   )}
                   <TableCell>

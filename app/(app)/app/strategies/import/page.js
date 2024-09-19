@@ -372,7 +372,7 @@ const Import = () => {
         userId: user.uid,
         instrument: selectedInstrument,
         timeframe: selectedTimeframe,
-        positionType: selectedPositionType,
+        positionTypes: selectedPositionType,
         // metrics: metrics,
         // annualReturns: annualReturns,
         // monthlyReturns: monthlyReturns,
