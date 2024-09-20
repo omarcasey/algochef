@@ -23,49 +23,27 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "../ui/button";
-import { processData, processData2 } from "../processing/dataProcessing";
+import { calculateTradingMetrics, processData, processData2, processTradeData } from "../processing/dataProcessing";
 import { useFirestore } from "reactfire";
-import { doc, Timestamp, updateDoc } from "firebase/firestore";
+import { doc, Timestamp, updateDoc, writeBatch } from "firebase/firestore";
 
-const StrategyConfig = ({ strategy }) => {
-  const [initialCapital, setInitialCapital] = useState(parseFloat(strategy.metrics["Initial Capital"]));
+const StrategyConfig = ({ strategy, trades }) => {
+  const [initialCapital, setInitialCapital] = useState(parseFloat(strategy.metrics.initialCapital));
   const firestore = useFirestore();
 
   const reprocessData = async () => {
-    // Transform Firestore data
-    const transformData = (firestoreData) => {
-      return firestoreData.map((entry) => {
-        return Object.values(entry).flat();
-      });
-    };
 
-    const data = transformData(strategy.data);
-
-    const result = processData(strategy.columnLabels, data, initialCapital, strategy.positionTypes);
-    const annualReturns = processData2(strategy.columnLabels, data, initialCapital, "year", strategy.positionTypes);
-    const monthlyReturns = processData2(strategy.columnLabels, data, initialCapital, "month", strategy.positionTypes);
-    const weeklyReturns = processData2(strategy.columnLabels, data, initialCapital, "week", strategy.positionTypes);
-    const dailyReturns = processData2(strategy.columnLabels, data, initialCapital, "day", strategy.positionTypes);
-
-    console.log(result);
+    // Re-process metrics data
+    const metrics = calculateTradingMetrics(trades, initialCapital);
 
     try {
-      console.log("yo")
-      console.log(strategy.NO_ID_FIELD)
-
       // Get the document reference for the existing strategy
       const strategyDocRef = doc(firestore, "strategies", strategy.NO_ID_FIELD);
-      
-
+    
       // Update the existing strategy document
       await updateDoc(strategyDocRef, {
-        metrics: result.metrics,
-        equityCurveData: result.equityCurveData,
+        metrics: metrics,
         updatedAt: Timestamp.now(), // Track when the update occurred
-        annualReturns: annualReturns,
-        monthlyReturns: monthlyReturns,
-        weeklyReturns: weeklyReturns,
-        dailyReturns: dailyReturns,
       });
 
       console.log("Strategy updated successfully");
@@ -142,7 +120,7 @@ const StrategyConfig = ({ strategy }) => {
                 </SelectContent>
               </Select>
             </div>
-            <div className="flex flex-row">
+            <div className="flex flex-row !mb-2">
               <div className="flex flex-row items-center w-1/4"></div>
               <Button size={"sm"} className="w-32" onClick={reprocessData}>
                 Run

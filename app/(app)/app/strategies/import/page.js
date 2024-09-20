@@ -51,6 +51,7 @@ import {
   processData2,
   processData3,
   processTradeData,
+  calculateTradingMetrics,
 } from "@/components/processing/dataProcessing";
 import { useRouter } from "next/navigation";
 
@@ -347,6 +348,7 @@ const Import = () => {
 
       // Process trade data
       const trades = processTradeData(columnLabels, data, selectedPositionType);
+      const metrics = calculateTradingMetrics(trades, 10000);
 
       if (trades.length === 0) {
         toast({
@@ -373,7 +375,7 @@ const Import = () => {
         instrument: selectedInstrument,
         timeframe: selectedTimeframe,
         positionTypes: selectedPositionType,
-        // metrics: metrics,
+        metrics: metrics,
         // annualReturns: annualReturns,
         // monthlyReturns: monthlyReturns,
         // tradeDistribution: tradeDistribution,

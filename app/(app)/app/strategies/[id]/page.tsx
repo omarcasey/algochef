@@ -2,8 +2,13 @@
 import React, { useEffect, useRef, useState } from "react";
 import { useRouter, usePathname, useParams } from "next/navigation";
 import { LoadingSpinner } from "@/components/ui/spinner";
-import { useFirestore, useFirestoreDocData, useUser } from "reactfire";
-import { doc } from "firebase/firestore";
+import {
+  useFirestore,
+  useFirestoreCollection,
+  useFirestoreDocData,
+  useUser,
+} from "reactfire";
+import { collection, doc, orderBy, query } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { BsGraphDownArrow, BsTable } from "react-icons/bs";
@@ -43,6 +48,31 @@ const StrategyPage = () => {
   const firestore = useFirestore();
   const router = useRouter();
   const [isExpanded, setIsExpanded] = useState(true);
+  const [plotByTrade, setPlotByTrade] = useState(true);
+  const [plotByTime, setPlotByTime] = useState(false);
+  const [dataInDollars, setDataInDollars] = useState(true);
+  const [dataInPercent, setDataInPercent] = useState(false);
+  
+
+  const handlePlotByTradeChange = (checked: boolean) => {
+    setPlotByTrade(checked);
+    setPlotByTime(!checked);
+  };
+
+  const handlePlotByTimeChange = (checked: boolean) => {
+    setPlotByTime(checked);
+    setPlotByTrade(!checked);
+  };
+
+  const handleDataInDollarsChange = (checked: boolean) => {
+    setDataInDollars(checked);
+    setDataInPercent(!checked);
+  };
+
+  const handleDataInPercentChange = (checked: boolean) => {
+    setDataInPercent(checked);
+    setDataInDollars(!checked);
+  };
 
   const strategyId = params?.id;
 
@@ -65,7 +95,19 @@ const StrategyPage = () => {
   const { data: strategy, status: strategyStatus } =
     useFirestoreDocData(strategyRef);
 
-  if (status === "loading" || strategyStatus === "loading") {
+  const tradesCollectionRef = collection(
+    firestore,
+    `strategies/${strategyId}/trades`
+  );
+  const tradesQuery = query(tradesCollectionRef, orderBy("order"));
+  const { data: tradesData, status: tradesStatus } =
+    useFirestoreCollection(tradesQuery);
+
+  if (
+    status === "loading" ||
+    strategyStatus === "loading" ||
+    tradesStatus === "loading"
+  ) {
     return (
       <div className="h-screen w-full flex items-center justify-center">
         <LoadingSpinner size={45} />
@@ -77,9 +119,11 @@ const StrategyPage = () => {
     return <div>Please sign in to view strategies.</div>;
   }
 
-  if (strategyStatus === "error") {
-    return <div>Error fetching strategies.</div>;
+  if (strategyStatus === "error" || tradesStatus === "error") {
+    return <div>Error fetching data. Please try again later.</div>;
   }
+
+  const trades = tradesData ? tradesData.docs.map(doc => doc.data()) : [];
 
   const scrollToSection = (sectionId: keyof typeof sectionRefs) => {
     sectionRefs[sectionId].current?.scrollIntoView({ behavior: "smooth" });
@@ -215,6 +259,8 @@ const StrategyPage = () => {
                 <Switch
                   className="data-[state=checked]:bg-blue-500"
                   id="plotByTrade"
+                  checked={plotByTrade}
+                  onCheckedChange={handlePlotByTradeChange}
                 />
               </div>
               <div className="flex items-center !mt-1.5 border rounded-md px-3 py-2 w-full justify-between">
@@ -224,6 +270,8 @@ const StrategyPage = () => {
                 <Switch
                   className="data-[state=checked]:bg-blue-500"
                   id="plotByTime"
+                  checked={plotByTime}
+                  onCheckedChange={handlePlotByTimeChange}
                 />
               </div>
               <p className="!mt-8 text-sm">Data in</p>
@@ -234,6 +282,8 @@ const StrategyPage = () => {
                 <Switch
                   className="data-[state=checked]:bg-blue-500"
                   id="dataInDollar"
+                  checked={dataInDollars}
+                  onCheckedChange={handleDataInDollarsChange}
                 />
               </div>
               <div className="flex items-center !mt-1.5 border rounded-md px-3 py-2 w-full justify-between">
@@ -243,6 +293,8 @@ const StrategyPage = () => {
                 <Switch
                   className="data-[state=checked]:bg-blue-500"
                   id="dataInPercent"
+                  checked={dataInPercent}
+                  onCheckedChange={handleDataInPercentChange}
                 />
               </div>
             </>
@@ -251,22 +303,21 @@ const StrategyPage = () => {
         <ScrollArea className="flex-1 rounded-md bg-slate-50 dark:bg-black">
           <div className="p-6">
             <StrategyInfo strategy={strategy} />
-            <StrategyConfig strategy={strategy} />
+            <StrategyConfig strategy={strategy} trades={trades} />
           </div>
           <div id="summary" ref={sectionRefs.summary} className="p-6 space-y-8">
             <Summary strategy={strategy} />
-            <PortfolioGrowth strategy={strategy} />
-            <Drawdowns strategy={strategy} />
-            {/* <DrawdownDollar strategy={strategy} /> */}
-            <AnnualReturnsGraph strategy={strategy} />
-            <MonthlyReturnsGraph strategy={strategy} />
+            <PortfolioGrowth strategy={strategy} trades={trades} plotByTrade={plotByTrade} />
+            <Drawdowns strategy={strategy} trades={trades} plotByTrade={plotByTrade} />
+            <AnnualReturnsGraph strategy={strategy} trades={trades} dataInDollars={dataInDollars} />
+            {/* <MonthlyReturnsGraph strategy={strategy} />
             <MonthlyNetProfitGraph strategy={strategy} />
             <DailyNetProfitGraph strategy={strategy} />
             <MonthlyAnalysis strategy={strategy} />
             <TradeDistribution strategy={strategy} />
-            <TrailingReturns />
+            <TrailingReturns /> */}
           </div>
-          <div
+          {/* <div
             id="activereturns"
             ref={sectionRefs.activereturns}
             className="p-6 space-y-8"
@@ -305,7 +356,7 @@ const StrategyPage = () => {
           <div id="trades" ref={sectionRefs.trades} className="p-6 space-y-8">
             <TradingPerformance strategy={strategy} />
             <TradeList strategy={strategy} />
-          </div>
+          </div> */}
         </ScrollArea>
       </div>
     </>
