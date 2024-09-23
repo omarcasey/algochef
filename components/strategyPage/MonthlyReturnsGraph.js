@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   BarChart,
   Bar,
@@ -7,63 +7,105 @@ import {
   Tooltip,
   CartesianGrid,
   ResponsiveContainer,
-  Legend,
 } from "recharts";
 
-const MonthlyReturnsGraph = ({ strategy }) => {
-  // Transform the strategy data into a format suitable for Recharts
-  const data = strategy.monthlyReturns.map(
-    ({ period, netProfit, maxRunup, maxDrawdown }) => ({
-      period,
-      netProfit: parseFloat(netProfit), // Convert string to float
-      maxRunup: parseFloat(maxRunup), // Positive part of run-up
-      maxDrawdown: -parseFloat(maxDrawdown), // Negative part of drawdown
-    })
-  );
+const MonthlyReturnsGraph = ({ strategy, trades, dataInDollars = false }) => {
+  const data = useMemo(() => {
+    if (!trades || trades.length === 0) {
+      console.log("No trades data available");
+      return [];
+    }
 
-  // Date formatter to show Month and Year
-  const dateFormatter = (date) => {
-    // Split the period into month and year
-    const [month, year] = date.split("/");
-    // Create a Date object with parsed month and year (month is 0-indexed)
-    const parsedDate = new Date(year, month - 1);
-    // Format the Date object to 'Mon YYYY'
+    const monthlyData = {};
+
+    trades.forEach((trade) => {
+      const date = new Date(trade.exitDate.toDate());
+      const period = `${date.getMonth() + 1}/${date.getFullYear()}`;
+
+      if (!monthlyData[period]) {
+        monthlyData[period] = {
+          period,
+          netProfit: 0,
+          maxRunup: 0,
+          maxDrawdown: 0,
+          runningProfit: 0,
+          peakProfit: 0,
+          lowestProfit: 0,
+        };
+      }
+
+      const tradeProfit = trade.netProfit;
+      monthlyData[period].netProfit += tradeProfit;
+      monthlyData[period].runningProfit += tradeProfit;
+
+      if (monthlyData[period].runningProfit > monthlyData[period].peakProfit) {
+        monthlyData[period].peakProfit = monthlyData[period].runningProfit;
+        monthlyData[period].lowestProfit = monthlyData[period].runningProfit;
+      }
+
+      if (monthlyData[period].runningProfit < monthlyData[period].lowestProfit) {
+        monthlyData[period].lowestProfit = monthlyData[period].runningProfit;
+      }
+
+      const currentDrawdown = monthlyData[period].peakProfit - monthlyData[period].runningProfit;
+      if (currentDrawdown > monthlyData[period].maxDrawdown) {
+        monthlyData[period].maxDrawdown = currentDrawdown;
+      }
+
+      const currentRunup = monthlyData[period].runningProfit - monthlyData[period].lowestProfit;
+      if (currentRunup > monthlyData[period].maxRunup) {
+        monthlyData[period].maxRunup = currentRunup;
+      }
+    });
+
+    return Object.values(monthlyData).map((monthData) => ({
+      ...monthData,
+      percentNetProfit: (monthData.netProfit / strategy.metrics.initialCapital) * 100,
+      percentMaxRunup: (monthData.maxRunup / strategy.metrics.initialCapital) * 100,
+      percentMaxDrawdown: (monthData.maxDrawdown / strategy.metrics.initialCapital) * 100,
+    }));
+  }, [trades, strategy]);
+
+  const dateFormatter = (dateString) => {
+    const [month, year] = dateString.split("/");
+    if (!month || !year) {
+      return "Invalid Date";
+    }
+    const parsedDate = new Date(parseInt(year), parseInt(month) - 1);
+    if (isNaN(parsedDate.getTime())) {
+      return "Invalid Date";
+    }
     const options = { year: "numeric", month: "short" };
     return new Intl.DateTimeFormat("en-US", options).format(parsedDate);
   };
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
+      const { netProfit, maxRunup, maxDrawdown, percentNetProfit, percentMaxRunup, percentMaxDrawdown } = payload[0].payload;
       return (
         <div className="custom-tooltip bg-white dark:bg-gray-800 p-4 border border-gray-300 dark:border-gray-700 rounded-md shadow-lg">
-          <p className="label text-gray-700 dark:text-white font-medium">
-            {dateFormatter(label)}
-          </p>
+          <p className="label text-gray-700 dark:text-white font-medium">{dateFormatter(label)}</p>
           <div className="flex flex-row items-center">
             <div className="w-2 h-2 bg-blue-500 rounded-full mr-2" />
             <p className="text-blue-500 font-semibold">
-              {`Net Profit: $${payload[0].value}`}
+              {`Net Profit: ${dataInDollars ? `$${netProfit.toLocaleString()}` : `${percentNetProfit.toFixed(2)}%`}`}
             </p>
           </div>
-
           <div className="flex flex-row items-center mt-2">
             <div className="w-1.5 h-1.5 bg-green-500 rounded-full mr-2" />
             <p className="text-green-500 font-semibold text-xs">
-              {`Max Runup: $${payload[1].value}`}
+              {`Max Runup: ${dataInDollars ? `$${maxRunup.toLocaleString()}` : `${percentMaxRunup.toFixed(2)}%`}`}
             </p>
           </div>
-
           <div className="flex flex-row items-center">
             <div className="w-1.5 h-1.5 bg-red-500 rounded-full mr-2" />
             <p className="text-red-500 font-semibold text-xs">
-              {`Max Drawdown: $${payload[2].value}`}
+              {`Max Drawdown: ${dataInDollars ? `$${Math.abs(maxDrawdown).toLocaleString()}` : `${Math.abs(percentMaxDrawdown).toFixed(2)}%`}`}
             </p>
           </div>
-
         </div>
       );
     }
-
     return null;
   };
 
@@ -75,49 +117,43 @@ const MonthlyReturnsGraph = ({ strategy }) => {
       <ResponsiveContainer width="100%" height={400}>
         <BarChart
           data={data}
-          margin={{ left: 15 }} // Adjust margins
-          stackOffset="sign" // Stacks the bars relative to the base line (0)
+          margin={{ left: 15 }}
+          stackOffset="sign"
         >
           <CartesianGrid vertical={false} />
           <XAxis
             dataKey="period"
-            tickFormatter={dateFormatter} // Format x-axis labels as "Jan 2015"
+            tickFormatter={dateFormatter}
             fontSize={12}
             tickMargin={5}
-            interval={Math.floor(data.length / 12)} // Adjust the interval to control the number of ticks
+            interval={Math.floor(data.length / 12)}
           />
           <YAxis
-            tickFormatter={(value) => `$${value.toLocaleString()}`}
-            width={80} // Set width to ensure the labels fit
-            axisLine={false} // Remove the Y-axis line
+            tickFormatter={(value) => dataInDollars ? `$${value.toLocaleString()}` : `${value}%`}
+            width={80}
+            axisLine={false}
             tickMargin={15}
             tickLine={false}
             fontSize={14}
           />
-          <Tooltip
-            content={<CustomTooltip />} // Use the custom tooltip
-          />
-          {/* <Legend verticalAlign="top" height={36} /> */}
-          <Bar
-            dataKey="netProfit"
-            stackId="a"
-            fill="#097EF2"
-            name="Net Profit"
-          />
-          <Bar
-            dataKey="maxRunup"
-            stackId="a"
-            fill="#50E2B0"
-            name="Max Run-up"
-            fillOpacity={0.25}
-          />
-          <Bar
-            dataKey="maxDrawdown"
+          <Tooltip content={<CustomTooltip />} />
+          {/* <Bar
+            dataKey={dataInDollars ? "maxDrawdown" : "percentMaxDrawdown"}
             stackId="a"
             fill="#F95F62"
-            name="Max Drawdown"
             fillOpacity={0.25}
+          /> */}
+          <Bar
+            dataKey={dataInDollars ? "netProfit" : "percentNetProfit"}
+            stackId="a"
+            fill="#097EF2"
           />
+          {/* <Bar
+            dataKey={dataInDollars ? "maxRunup" : "percentMaxRunup"}
+            stackId="a"
+            fill="#50E2B0"
+            fillOpacity={0.25}
+          /> */}
         </BarChart>
       </ResponsiveContainer>
     </div>

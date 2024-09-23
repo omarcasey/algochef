@@ -38,9 +38,11 @@ import DailyNetProfitGraph from "@/components/strategyPage/DailyNetProfitGraph";
 import MonthlyAnalysis from "@/components/strategyPage/MonthlyAnalysis";
 import TradeDistribution from "@/components/strategyPage/TradeDistribution";
 import BiggestDrawdowns from "@/components/strategyPage/BiggestDrawdowns";
+import MonteCarloAnalysis from "@/components/strategyPage/MonteCarloAnalysis";
 import { GoSidebarCollapse } from "react-icons/go";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
+import { IoAnalyticsSharp } from "react-icons/io5";
 
 const StrategyPage = () => {
   const params = useParams<{ id: string }>();
@@ -52,7 +54,7 @@ const StrategyPage = () => {
   const [plotByTime, setPlotByTime] = useState(false);
   const [dataInDollars, setDataInDollars] = useState(true);
   const [dataInPercent, setDataInPercent] = useState(false);
-  
+  const [monteCarloSelected, setMonteCarloSelected] = useState(false);
 
   const handlePlotByTradeChange = (checked: boolean) => {
     setPlotByTrade(checked);
@@ -123,7 +125,7 @@ const StrategyPage = () => {
     return <div>Error fetching data. Please try again later.</div>;
   }
 
-  const trades = tradesData ? tradesData.docs.map(doc => doc.data()) : [];
+  const trades = tradesData ? tradesData.docs.map((doc) => doc.data()) : [];
 
   const scrollToSection = (sectionId: keyof typeof sectionRefs) => {
     sectionRefs[sectionId].current?.scrollIntoView({ behavior: "smooth" });
@@ -242,11 +244,35 @@ const StrategyPage = () => {
             variant={"ghost"}
             size={"default"}
             className="w-full flex items-center justify-start"
-            onClick={() => scrollToSection("trades")}
+            onClick={async () => {
+              await setMonteCarloSelected(false);
+              scrollToSection("trades");
+
+            }}
           >
             <BsTable className="mr-2 shrink-0" />
             <p className={`font-normal ${isExpanded ? " " : "hidden"}`}>
               Trades
+            </p>
+          </Button>
+          <p
+            className={`ml-7 !mb-4 !mt-10 text-gray-400 text-xs uppercase ${
+              isExpanded ? " " : "hidden"
+            }`}
+          >
+            Analysis
+          </p>
+          <Button
+            variant={"ghost"}
+            size={"default"}
+            className={`w-full flex items-center justify-start ${
+              monteCarloSelected && "bg-blue-100"
+            }`}
+            onClick={() => setMonteCarloSelected(!monteCarloSelected)}
+          >
+            <IoAnalyticsSharp className="mr-2 shrink-0" />
+            <p className={`font-normal ${isExpanded ? " " : "hidden"}`}>
+              Monte Carlo
             </p>
           </Button>
           {isExpanded && (
@@ -300,64 +326,97 @@ const StrategyPage = () => {
             </>
           )}
         </div>
-        <ScrollArea className="flex-1 rounded-md bg-slate-50 dark:bg-black">
-          <div className="p-6">
-            <StrategyInfo strategy={strategy} />
-            <StrategyConfig strategy={strategy} trades={trades} />
-          </div>
-          <div id="summary" ref={sectionRefs.summary} className="p-6 space-y-8">
-            <Summary strategy={strategy} />
-            <PortfolioGrowth strategy={strategy} trades={trades} plotByTrade={plotByTrade} />
-            <Drawdowns strategy={strategy} trades={trades} plotByTrade={plotByTrade} />
-            <AnnualReturnsGraph strategy={strategy} trades={trades} dataInDollars={dataInDollars} />
-            {/* <MonthlyReturnsGraph strategy={strategy} />
-            <MonthlyNetProfitGraph strategy={strategy} />
-            <DailyNetProfitGraph strategy={strategy} />
-            <MonthlyAnalysis strategy={strategy} />
-            <TradeDistribution strategy={strategy} />
-            <TrailingReturns /> */}
-          </div>
-          {/* <div
-            id="activereturns"
-            ref={sectionRefs.activereturns}
-            className="p-6 space-y-8"
-          >
-            <ActiveReturnsChart />
-          </div>
-          <div id="metrics" ref={sectionRefs.metrics} className="p-6 space-y-8">
-            <RiskandReturnMetrics strategy={strategy} />
-          </div>
-          <div
-            id="annualreturns"
-            ref={sectionRefs.annualreturns}
-            className="p-6 space-y-8"
-          >
-            <AnnualReturns strategy={strategy} />
-          </div>
-          <div
-            id="monthlyreturns"
-            ref={sectionRefs.monthlyreturns}
-            className="p-6 space-y-8"
-          >
-            <MonthlyReturns strategy={strategy} />
-          </div>
-          <div
-            id="drawdowns"
-            ref={sectionRefs.drawdowns}
-            className="p-6 space-y-8"
-          >
-            <BiggestDrawdowns strategy={strategy} />
-          </div>
-          <div
-            id="rollingreturns"
-            ref={sectionRefs.rollingreturns}
-            className="p-6 space-y-8"
-          ></div>
-          <div id="trades" ref={sectionRefs.trades} className="p-6 space-y-8">
-            <TradingPerformance strategy={strategy} />
-            <TradeList strategy={strategy} />
-          </div> */}
-        </ScrollArea>
+        {monteCarloSelected ? (
+          <ScrollArea className="flex-1 rounded-md bg-slate-50 dark:bg-black">
+            <div className="p-6">
+              <StrategyInfo strategy={strategy} />
+              <MonteCarloAnalysis strategy={strategy} trades={trades} />
+            </div>
+          </ScrollArea>
+        ) : (
+          <ScrollArea className="flex-1 rounded-md bg-slate-50 dark:bg-black">
+            <div className="p-6">
+              <StrategyInfo strategy={strategy} />
+              <StrategyConfig strategy={strategy} trades={trades} />
+            </div>
+            <div
+              id="summary"
+              ref={sectionRefs.summary}
+              className="p-6 space-y-8"
+            >
+              <Summary strategy={strategy} />
+              <PortfolioGrowth
+                strategy={strategy}
+                trades={trades}
+                plotByTrade={plotByTrade}
+              />
+              <Drawdowns
+                strategy={strategy}
+                trades={trades}
+                plotByTrade={plotByTrade}
+              />
+              <AnnualReturnsGraph
+                strategy={strategy}
+                trades={trades}
+                dataInDollars={dataInDollars}
+              />
+              <MonthlyReturnsGraph
+                strategy={strategy}
+                trades={trades}
+                dataInDollars={dataInDollars}
+              />
+              <MonthlyNetProfitGraph strategy={strategy} trades={trades} />
+              <DailyNetProfitGraph strategy={strategy} trades={trades} />
+              <MonthlyAnalysis trades={trades} />
+              <TradeDistribution trades={trades} />
+              <TrailingReturns />
+            </div>
+            <div
+              id="activereturns"
+              ref={sectionRefs.activereturns}
+              className="p-6 space-y-8"
+            >
+              <ActiveReturnsChart />
+            </div>
+            <div
+              id="metrics"
+              ref={sectionRefs.metrics}
+              className="p-6 space-y-8"
+            >
+              <RiskandReturnMetrics strategy={strategy} />
+            </div>
+            <div
+              id="annualreturns"
+              ref={sectionRefs.annualreturns}
+              className="p-6 space-y-8"
+            >
+              {/* <AnnualReturns strategy={strategy} /> */}
+            </div>
+            <div
+              id="monthlyreturns"
+              ref={sectionRefs.monthlyreturns}
+              className="p-6 space-y-8"
+            >
+              {/* <MonthlyReturns strategy={strategy} /> */}
+            </div>
+            <div
+              id="drawdowns"
+              ref={sectionRefs.drawdowns}
+              className="p-6 space-y-8"
+            >
+              <BiggestDrawdowns strategy={strategy} />
+            </div>
+            <div
+              id="rollingreturns"
+              ref={sectionRefs.rollingreturns}
+              className="p-6 space-y-8"
+            ></div>
+            <div id="trades" ref={sectionRefs.trades} className="p-6 space-y-8">
+              <TradingPerformance strategy={strategy} />
+              <TradeList trades={trades} />
+            </div>
+          </ScrollArea>
+        )}
       </div>
     </>
   );

@@ -30,23 +30,18 @@ const PortfolioGrowth = ({ strategy, trades, plotByTrade = false }) => {
       });
     });
 
-    console.log("Processed equity curve data:", equityCurve);
     return equityCurve;
   }, [trades, strategy.metrics.initialCapital]);
-
-  useEffect(() => {
-    console.log("Component rendered with data:", data);
-  }, [data]);
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       const xValue = plotByTrade ? `Trade ${label}` : new Date(label).toLocaleDateString();
       return (
-        <div className="custom-tooltip bg-white dark:bg-gray-800 p-4 border border-gray-300 dark:border-gray-700 rounded-md shadow-lg">
-          <p className="label text-gray-700 dark:text-white font-medium">{xValue}</p>
+        <div className="bg-white dark:bg-gray-800 p-4 border border-gray-300 dark:border-gray-700 rounded-md shadow-lg">
+          <p className="text-gray-700 dark:text-white font-medium">{xValue}</p>
           <div className="flex flex-row items-center">
             <div className="w-2 h-2 bg-blue-600 dark:bg-green-400 rounded-full mr-2" />
-            <p className="intro text-blue-600 dark:text-green-400 font-semibold">
+            <p className="text-blue-600 dark:text-green-400 font-semibold">
               {`${strategy.name}: $${payload[0].value.toLocaleString()}`}
             </p>
           </div>

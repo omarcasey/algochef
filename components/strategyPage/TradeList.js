@@ -8,22 +8,12 @@ import {
   TableRow,
 } from "../ui/table";
 
-const TradeList = ({ strategy }) => {
+const TradeList = ({ trades }) => {
   const [currentPage, setCurrentPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(12);
 
-  // Transform Firestore data
-  const transformData = (firestoreData) => {
-    return firestoreData.map((entry) => {
-      return Object.values(entry).flat();
-    });
-  };
-
-  const data = transformData(strategy.data);
-  const labels = strategy.columnLabels;
-
   // Slice data for pagination
-  const paginatedData = data.slice(
+  const paginatedTrades = trades.slice(
     currentPage * rowsPerPage,
     currentPage * rowsPerPage + rowsPerPage
   );
@@ -39,38 +29,44 @@ const TradeList = ({ strategy }) => {
     setCurrentPage(0); // Reset to first page
   };
 
-  const pageCount = Math.ceil(data.length / rowsPerPage);
+  const pageCount = Math.ceil(trades.length / rowsPerPage);
   const startEntry = currentPage * rowsPerPage + 1;
-  const endEntry = Math.min(startEntry + rowsPerPage - 1, data.length);
+  const endEntry = Math.min(startEntry + rowsPerPage - 1, trades.length);
 
   return (
     <div className="rounded-xl shadow-2xl dark:border w-full bg-white dark:bg-black py-6 px-10">
       <h1 className="text-xl text-blue-900 dark:text-white saturate-200 font-medium mb-6">
         Trade Raw Data
       </h1>
-      <div className="">
+      <div className="overflow-x-auto">
         <Table className="w-full table-fixed">
           <TableHeader>
             <TableRow>
-              {data.length > 0 &&
-                data[0].map((_, idx) => (
-                  <TableHead key={idx} className="">
-                    {labels[idx] ? labels[idx] : ``}
-                  </TableHead>
-                ))}
+              {/* Define table headers for all trade properties */}
+              <TableHead>Trade #</TableHead>
+              <TableHead>Entry Date</TableHead>
+              <TableHead>Entry Price</TableHead>
+              <TableHead>Exit Date</TableHead>
+              <TableHead>Exit Price</TableHead>
+              <TableHead>Position Type</TableHead>
+              <TableHead>Size</TableHead>
+              <TableHead>Net Profit</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
-            {paginatedData.map((row, rowIndex) => (
+            {paginatedTrades.map((trade, rowIndex) => (
               <TableRow
                 key={rowIndex}
                 className="odd:bg-gray-100 dark:odd:bg-gray-800"
               >
-                {row.map((cell, cellIndex) => (
-                  <TableCell key={cellIndex} className="p-3">
-                    {cell}
-                  </TableCell>
-                ))}
+                <TableCell>{trade.order}</TableCell>
+                <TableCell>{trade.entryDate.toDate().toLocaleString()}</TableCell>
+                <TableCell>{trade.entryPrice}</TableCell>
+                <TableCell>{trade.exitDate.toDate().toLocaleString()}</TableCell>
+                <TableCell>{trade.exitPrice}</TableCell>
+                <TableCell>{trade.positionType}</TableCell>
+                <TableCell>{trade.size}</TableCell>
+                <TableCell>{trade.netProfit}</TableCell>
               </TableRow>
             ))}
           </TableBody>
@@ -93,7 +89,7 @@ const TradeList = ({ strategy }) => {
             <span className="ml-2">entries</span>
           </div>
           <div className="text-sm">
-            Showing {startEntry} to {endEntry} of {data.length} entries
+            Showing {startEntry} to {endEntry} of {trades.length} entries
           </div>
           <div className="flex space-x-2">
             <button

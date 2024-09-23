@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useMemo } from "react";
 import {
   BarChart,
   Bar,
@@ -9,30 +9,25 @@ import {
   ResponsiveContainer,
 } from "recharts";
 
-const DailyNetProfitGraph = ({ strategy }) => {
-  const calculateDailyNetProfit = (dailyReturns) => {
+const DailyNetProfitGraph = ({ strategy, trades }) => {
+  const calculateDailyNetProfit = (trades) => {
     // Initialize an array to store net profit for each weekday (Monday to Friday)
     const dailyNetProfit = Array(5).fill(0); // Array for Mon-Fri only
 
-    dailyReturns.forEach((item) => {
-      // Split the date string and rearrange to 'YYYY-MM-DD' format
-      const [day, month, year] = item.period.split("/");
-      const date = new Date(`${year}-${month}-${day}`);
-      const dayOfWeek = date.getDay(); // getDay() returns 0 (Sunday) to 6 (Saturday)
-      console.log(dayOfWeek);
+    trades.forEach((trade) => {
+      const tradeDate = new Date(trade.exitDate.toDate()); // Assuming `exitDate` is a valid date format like 'YYYY-MM-DD'
+      const dayOfWeek = tradeDate.getDay(); // getDay() returns 0 (Sunday) to 6 (Saturday)
 
       // Exclude weekends: Sunday (0) and Saturday (6)
       if (dayOfWeek >= 1 && dayOfWeek <= 5) { // Mon (1) to Fri (5)
-        dailyNetProfit[dayOfWeek - 1] += parseFloat(item.netProfit); // Adjust index to fit array (0-4)
+        dailyNetProfit[dayOfWeek - 1] += trade.netProfit; // Adjust index to fit array (0-4 for Mon-Fri)
       }
     });
 
     return dailyNetProfit;
   };
 
-  const dailyNetProfitData = calculateDailyNetProfit(strategy.dailyReturns);
-  console.log(strategy.dailyReturns);
-  console.log(dailyNetProfitData);
+  const dailyNetProfitData = useMemo(() => calculateDailyNetProfit(trades), [trades]);
 
   // Prepare data for Recharts, adding weekday names for the X-axis
   const data = dailyNetProfitData.map((profit, index) => ({
@@ -56,7 +51,6 @@ const DailyNetProfitGraph = ({ strategy }) => {
         </div>
       );
     }
-
     return null;
   };
 

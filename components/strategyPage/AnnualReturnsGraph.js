@@ -28,11 +28,11 @@ const AnnualReturnsGraph = ({ strategy, trades, dataInDollars = false }) => {
           period: year,
           netProfit: 0,
           startingCapital: runningCapital, // The capital at the start of the year
-          maxRunup: 0, // Track the highest gain (from trough to peak)
-          maxDrawdown: 0, // Track the largest peak-to-trough drawdown
-          runningEquity: 0, // Track current equity
-          peakEquity: runningCapital, // Track peak equity
-          troughEquity: runningCapital, // Track the lowest point before peak equity
+          maxRunup: 0,
+          maxDrawdown: 0,
+          runningEquity: runningCapital,
+          peakEquity: runningCapital,
+          lowestEquity: runningCapital,
         };
       }
 
@@ -46,29 +46,31 @@ const AnnualReturnsGraph = ({ strategy, trades, dataInDollars = false }) => {
       // Update peak equity if the current equity exceeds the previous peak
       if (annualData[year].runningEquity > annualData[year].peakEquity) {
         annualData[year].peakEquity = annualData[year].runningEquity;
+        // Reset lowest equity when we reach a new peak
+        annualData[year].lowestEquity = annualData[year].runningEquity;
       }
 
-      // Update trough equity if the current equity is lower than the previous trough
-      if (annualData[year].runningEquity < annualData[year].troughEquity) {
-        annualData[year].troughEquity = annualData[year].runningEquity;
+      // Update lowest equity if the current equity is lower than the previous lowest
+      if (annualData[year].runningEquity < annualData[year].lowestEquity) {
+        annualData[year].lowestEquity = annualData[year].runningEquity;
       }
 
-      // Calculate drawdown as the difference between peak and current equity
-      const drawdown =
+      // Calculate current drawdown
+      const currentDrawdown =
         annualData[year].peakEquity - annualData[year].runningEquity;
 
       // Update max drawdown if this drawdown is larger than previous ones
-      if (drawdown > annualData[year].maxDrawdown) {
-        annualData[year].maxDrawdown = drawdown;
+      if (currentDrawdown > annualData[year].maxDrawdown) {
+        annualData[year].maxDrawdown = currentDrawdown;
       }
 
-      // Calculate runup as the difference between current equity and trough equity
-      const runup =
-        annualData[year].runningEquity - annualData[year].troughEquity;
+      // Calculate current runup
+      const currentRunup =
+        annualData[year].runningEquity - annualData[year].lowestEquity;
 
       // Update max runup if this runup is larger than previous ones
-      if (runup > annualData[year].maxRunup) {
-        annualData[year].maxRunup = runup;
+      if (currentRunup > annualData[year].maxRunup) {
+        annualData[year].maxRunup = currentRunup;
       }
     });
 
@@ -83,6 +85,9 @@ const AnnualReturnsGraph = ({ strategy, trades, dataInDollars = false }) => {
 
       return {
         ...yearData,
+        percentReturnValue: percentReturnValue,
+        percentMaxRunup: percentMaxRunup,
+        percentMaxDrawdown: percentMaxDrawdown,
         adjustedMaxDrawdown:
           yearData.netProfit < 0
             ? yearData.maxDrawdown - yearData.netProfit
@@ -91,13 +96,30 @@ const AnnualReturnsGraph = ({ strategy, trades, dataInDollars = false }) => {
           yearData.netProfit > 0
             ? yearData.maxRunup - yearData.netProfit
             : yearData.maxRunup,
+        adjustedPercentMaxDrawdown:
+          percentReturnValue < 0
+            ? percentMaxDrawdown - percentReturnValue
+            : percentMaxDrawdown,
+        adjustedPercentMaxRunup:
+          percentReturnValue > 0
+            ? percentMaxRunup - percentReturnValue
+            : percentMaxRunup,
       };
     });
   }, [trades, dataInDollars, strategy]);
 
+  console.log(data);
+
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
-      const { netProfit, maxRunup, maxDrawdown } = payload[0].payload;
+      const {
+        netProfit,
+        maxRunup,
+        maxDrawdown,
+        percentMaxDrawdown,
+        percentMaxRunup,
+        percentReturnValue,
+      } = payload[0].payload;
       return (
         <div className="custom-tooltip bg-white dark:bg-gray-800 p-4 border border-gray-300 dark:border-gray-700 rounded-md shadow-lg">
           <p className="label text-gray-700 dark:text-white font-medium">
@@ -109,7 +131,7 @@ const AnnualReturnsGraph = ({ strategy, trades, dataInDollars = false }) => {
               {`Net Profit: ${
                 dataInDollars
                   ? `$${netProfit.toLocaleString()}`
-                  : `${netProfit.toFixed(2)}%`
+                  : `${percentReturnValue.toFixed(2)}%`
               }`}
             </p>
           </div>
@@ -120,7 +142,7 @@ const AnnualReturnsGraph = ({ strategy, trades, dataInDollars = false }) => {
               {`Max Runup: ${
                 dataInDollars
                   ? `$${maxRunup.toLocaleString()}`
-                  : `${maxRunup.toFixed(2)}%`
+                  : `${percentMaxRunup.toFixed(2)}%`
               }`}
             </p>
           </div>
@@ -131,7 +153,7 @@ const AnnualReturnsGraph = ({ strategy, trades, dataInDollars = false }) => {
               {`Max Drawdown: (${
                 dataInDollars
                   ? `$${Math.abs(maxDrawdown).toLocaleString()}`
-                  : `${Math.abs(maxDrawdown).toFixed(2)}%`
+                  : `${Math.abs(percentMaxDrawdown).toFixed(2)}%`
               })`}
             </p>
           </div>
@@ -142,8 +164,6 @@ const AnnualReturnsGraph = ({ strategy, trades, dataInDollars = false }) => {
     return null;
   };
 
-  console.log(data);
-
   return (
     <div className="rounded-xl shadow-2xl dark:border w-full bg-white dark:bg-black py-6 px-10">
       <h1 className="text-xl text-blue-900 dark:text-white saturate-200 font-medium mb-6">
@@ -152,48 +172,60 @@ const AnnualReturnsGraph = ({ strategy, trades, dataInDollars = false }) => {
       <ResponsiveContainer width="100%" height={400}>
         <BarChart
           data={data}
-          margin={{ left: 15 }} // Adjust margins
-          stackOffset="sign" // Stacks the bars relative to the base line (0)
+          margin={{ left: 15 }}
+          stackOffset="sign"
         >
           <CartesianGrid vertical={false} />
           <XAxis
             dataKey="period"
             fontSize={12}
             tickMargin={5}
-            interval={Math.floor(data.length / 12)} // Adjust the interval to control the number of ticks
+            interval={Math.floor(data.length / 12)}
           />
           <YAxis
             tickFormatter={(value) =>
               dataInDollars ? `$${value.toLocaleString()}` : `${value}%`
             }
-            width={80} // Set width to ensure the labels fit
-            axisLine={false} // Remove the Y-axis line
+            width={80}
+            axisLine={false}
             tickMargin={15}
             tickLine={false}
             fontSize={14}
             domain={["auto", "auto"]}
           />
           <Tooltip content={<CustomTooltip />} />
-          <Bar
-            dataKey="netProfit"
-            stackId="a"
-            fill="#097EF2"
-            name="Net Profit"
-          />
-          <Bar
-            dataKey="adjustedMaxRunup"
-            stackId="a"
-            fill="#50E2B0"
-            name="Max Run-up"
-            fillOpacity={0.25}
-          />
-          <Bar
-            dataKey="adjustedMaxDrawdown"
+          {/* <Bar
+            dataKey={
+              dataInDollars
+                ? "adjustedMaxDrawdown"
+                : "adjustedPercentMaxDrawdown"
+            }
             stackId="a"
             fill="#F95F62"
-            name="Max Drawdown"
-            fillOpacity={0.25}
+            name={
+              dataInDollars
+                ? "adjustedMaxDrawdown"
+                : "adjustedPercentMaxDrawdown"
+            }
+            fillOpacity={0.8}
+          /> */}
+          <Bar
+            dataKey={dataInDollars ? "netProfit" : "percentReturnValue"}
+            stackId="a"
+            fill="#097EF2"
+            name={dataInDollars ? "netProfit" : "percentReturnValue"}
           />
+          {/* <Bar
+            dataKey={
+              dataInDollars ? "adjustedMaxRunup" : "adjustedPercentMaxRunup"
+            }
+            stackId="a"
+            fill="#50E2B0"
+            name={
+              dataInDollars ? "adjustedMaxRunup" : "adjustedPercentMaxRunup"
+            }
+            fillOpacity={0.8}
+          /> */}
         </BarChart>
       </ResponsiveContainer>
     </div>
