@@ -349,6 +349,8 @@ const Import = () => {
       // Process trade data
       const trades = processTradeData(columnLabels, data, selectedPositionType);
       const metrics = calculateTradingMetrics(trades, 10000);
+      const monthlyReturns = null;
+      const annualReturns = null;
 
       if (trades.length === 0) {
         toast({
@@ -359,14 +361,6 @@ const Import = () => {
         return;
       }
 
-      // Calculate metrics
-      // const metrics = calculateMetrics(trades, initialCapital);
-      // const { annualReturns, monthlyReturns } = calculateReturns(
-      //   trades,
-      //   initialCapital
-      // );
-      // const tradeDistribution = calculateTradeDistribution(trades);
-
       // Create a new strategy document with pre-calculated metrics
       const strategyDoc = await addDoc(collection(firestore, "strategies"), {
         name: strategyName,
@@ -376,9 +370,6 @@ const Import = () => {
         timeframe: selectedTimeframe,
         positionTypes: selectedPositionType,
         metrics: metrics,
-        // annualReturns: annualReturns,
-        // monthlyReturns: monthlyReturns,
-        // tradeDistribution: tradeDistribution,
       });
 
       // Use a batch write to add all trades
@@ -403,72 +394,6 @@ const Import = () => {
       // Redirect to strategy page
       router.push(`/app/strategies/${strategyDoc.id}`);
 
-      // const result = processData(
-      //   columnLabels,
-      //   data,
-      //   10000,
-      //   selectedPositionType
-      // );
-      // const annualReturns = processData2(
-      //   columnLabels,
-      //   data,
-      //   10000,
-      //   "year",
-      //   selectedPositionType
-      // );
-      // const monthlyReturns = processData2(
-      //   columnLabels,
-      //   data,
-      //   10000,
-      //   "month",
-      //   selectedPositionType
-      // );
-      // const weeklyReturns = processData2(columnLabels, data, 10000, "week", selectedPositionType);
-      // const dailyReturns = processData2(
-      //   columnLabels,
-      //   data,
-      //   10000,
-      //   "day",
-      //   selectedPositionType
-      // );
-      // const monthlyAnalysis = processData3(
-      //   columnLabels,
-      //   data,
-      //   10000,
-      //   "day",
-      //   selectedPositionType
-      // );
-      // const tradeDistribution = calculateTradeDistribution(
-      //   columnLabels,
-      //   data,
-      //   selectedPositionType
-      // );
-
-      // Add a new document with a generated ID and strategy name.
-      // const strategyDoc = await addDoc(collection(firestore, "strategies"), {
-      //   name: strategyName,
-      //   metrics: result.metrics,
-      //   equityCurveData: result.equityCurveData,
-      //   createdAt: Timestamp.now(),
-      //   userId: user.uid,
-      //   annualReturns: annualReturns,
-      //   monthlyReturns: monthlyReturns,
-      //   // weeklyReturns: weeklyReturns,
-      //   dailyReturns: dailyReturns,
-      //   monthlyAnalysis: monthlyAnalysis,
-      //   tradeDistribution: tradeDistribution,
-      //   columnLabels: columnLabels,
-      //   data: data.map((row, index) => ({ row })),
-      //   positionTypes: selectedPositionType,
-      //   // include any other relevant fields here
-      // });
-
-      // toast({
-      //   title: "Data imported successfully!",
-      // });
-
-      // // Redirect to strategy page
-      // router.push(`/app/strategies/${strategyDoc.id}`);
     } catch (error) {
       console.error("Import error:", error.message);
       toast({

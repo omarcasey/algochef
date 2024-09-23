@@ -390,7 +390,7 @@ const StrategyPage = () => {
               ref={sectionRefs.annualreturns}
               className="p-6 space-y-8"
             >
-              {/* <AnnualReturns strategy={strategy} /> */}
+              <AnnualReturns strategy={strategy} trades={trades} />
             </div>
             <div
               id="monthlyreturns"

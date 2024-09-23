@@ -21,21 +21,27 @@ const AnnualReturnsGraph = ({ strategy, trades, dataInDollars = false }) => {
     let runningCapital = initialCapital; // Track capital as it grows over the years
     const annualData = {};
 
+    // Find the earliest and latest years
+    const years = trades.map(trade => trade.exitYear);
+    const minYear = Math.min(...years);
+    const maxYear = Math.max(...years);
+
+    // Create entries for all years between minYear and maxYear
+    for (let year = minYear; year <= maxYear; year++) {
+      annualData[year] = {
+        period: year,
+        netProfit: 0,
+        startingCapital: runningCapital,
+        maxRunup: 0,
+        maxDrawdown: 0,
+        runningEquity: runningCapital,
+        peakEquity: runningCapital,
+        lowestEquity: runningCapital,
+      };
+    }
+
     trades.forEach((trade) => {
       const year = trade.exitYear;
-      if (!annualData[year]) {
-        annualData[year] = {
-          period: year,
-          netProfit: 0,
-          startingCapital: runningCapital, // The capital at the start of the year
-          maxRunup: 0,
-          maxDrawdown: 0,
-          runningEquity: runningCapital,
-          peakEquity: runningCapital,
-          lowestEquity: runningCapital,
-        };
-      }
-
       const tradeProfit = trade.netProfit;
       annualData[year].netProfit += tradeProfit;
 
@@ -75,13 +81,14 @@ const AnnualReturnsGraph = ({ strategy, trades, dataInDollars = false }) => {
     });
 
     // Now convert the object to an array and calculate returns based on the starting capital for each year
-    return Object.values(annualData).map((yearData) => {
-      const percentReturnValue =
-        (yearData.netProfit / yearData.startingCapital) * 100; // Calculate percent return
-      const percentMaxRunup =
-        (yearData.maxRunup / yearData.startingCapital) * 100;
-      const percentMaxDrawdown =
-        (yearData.maxDrawdown / yearData.startingCapital) * 100;
+    return Object.values(annualData).map((yearData, index, array) => {
+      const startingCapital = index === 0 
+        ? initialCapital 
+        : array[index - 1].runningEquity; // Use the equity from the previous year
+
+      const percentReturnValue = (yearData.netProfit / startingCapital) * 100; // Calculate percent return
+      const percentMaxRunup = (yearData.maxRunup / startingCapital) * 100;
+      const percentMaxDrawdown = (yearData.maxDrawdown / startingCapital) * 100;
 
       return {
         ...yearData,
@@ -194,38 +201,12 @@ const AnnualReturnsGraph = ({ strategy, trades, dataInDollars = false }) => {
             domain={["auto", "auto"]}
           />
           <Tooltip content={<CustomTooltip />} />
-          {/* <Bar
-            dataKey={
-              dataInDollars
-                ? "adjustedMaxDrawdown"
-                : "adjustedPercentMaxDrawdown"
-            }
-            stackId="a"
-            fill="#F95F62"
-            name={
-              dataInDollars
-                ? "adjustedMaxDrawdown"
-                : "adjustedPercentMaxDrawdown"
-            }
-            fillOpacity={0.8}
-          /> */}
           <Bar
             dataKey={dataInDollars ? "netProfit" : "percentReturnValue"}
             stackId="a"
             fill="#097EF2"
             name={dataInDollars ? "netProfit" : "percentReturnValue"}
           />
-          {/* <Bar
-            dataKey={
-              dataInDollars ? "adjustedMaxRunup" : "adjustedPercentMaxRunup"
-            }
-            stackId="a"
-            fill="#50E2B0"
-            name={
-              dataInDollars ? "adjustedMaxRunup" : "adjustedPercentMaxRunup"
-            }
-            fillOpacity={0.8}
-          /> */}
         </BarChart>
       </ResponsiveContainer>
     </div>

@@ -84,7 +84,6 @@ export const processTradeData = (columnLabels, data, positionTypes) => {
       size,
       positionType,
       netProfit,
-      timestamp: Timestamp.fromDate(exitDate)
     };
   }).filter(trade => trade !== null);
 
@@ -106,20 +105,19 @@ export const calculateTradingMetrics = (trades, initialCapital) => {
   let consecutiveLosses = 0;
   let maxConsecutiveWins = 0;
   let maxConsecutiveLosses = 0;
+  let totalConsecutiveWins = 0;
+  let totalConsecutiveLosses = 0;
+  let winStreaks = 0;
+  let lossStreaks = 0;
   let maxDrawdown = 0;
-  let maxRunup = 0;
+  let maxDrawdownAmount = 0;
   let currentDrawdown = 0;
-  let currentRunup = 0;
-  let peakBalance = 0;
-  let troughBalance = Infinity;
-  let longestDrawdownDuration = 0;
-  let longestRunupDuration = 0;
-  let currentDrawdownDuration = 0;
-  let currentRunupDuration = 0;
+  let peakBalance = initialCapital;
+  let troughBalance = initialCapital;
   let maxDrawdownDate = null;
-  let maxRunupDate = null;
-  let longestFlatPeriod = 0;
-  let currentFlatPeriod = 0;
+  let totalDrawdownAmount = 0;
+  let totalDrawdownPeriod = 0;
+  let drawdownCount = 0;
 
   // Sort trades by date
   trades.sort((a, b) => a.exitDate.toDate() - b.exitDate.toDate());
@@ -128,75 +126,70 @@ export const calculateTradingMetrics = (trades, initialCapital) => {
   const lastTrade = trades[trades.length - 1];
   const tradingPeriod = lastTrade.exitDate.toDate() - firstTrade.exitDate.toDate();
   const totalTradingDays = Math.ceil(tradingPeriod / (1000 * 60 * 60 * 24));
+  const totalTradingYears = totalTradingDays / 365;
 
-  // const initialCapital = 100000; // Initial capital
   let balance = initialCapital;
-  let maxShares = 0;
   let monthlyReturns = [];
+  let yearlyReturns = [];
   let currentMonthProfit = 0;
+  let currentYearProfit = 0;
   let currentMonthStartBalance = initialCapital;
+  let currentYearStartBalance = initialCapital;
   let currentMonth = firstTrade.exitDate.toDate().getMonth();
   let currentYear = firstTrade.exitDate.toDate().getFullYear();
+
+  let allTradeNetProfits = [];
 
   trades.forEach((trade, index) => {
     totalNetProfit += trade.netProfit;
     balance += trade.netProfit;
+    allTradeNetProfits.push(trade.netProfit);
 
     if (trade.netProfit > 0) {
       grossProfit += trade.netProfit;
       winningTrades++;
       consecutiveWins++;
+      if (consecutiveWins === 1) winStreaks++;
       consecutiveLosses = 0;
       maxConsecutiveWins = Math.max(maxConsecutiveWins, consecutiveWins);
       largestWin = Math.max(largestWin, trade.netProfit);
-      currentFlatPeriod = 0;
     } else if (trade.netProfit < 0) {
       grossLoss += Math.abs(trade.netProfit);
       losingTrades++;
       consecutiveLosses++;
+      if (consecutiveLosses === 1) lossStreaks++;
       consecutiveWins = 0;
       maxConsecutiveLosses = Math.max(maxConsecutiveLosses, consecutiveLosses);
       largestLoss = Math.min(largestLoss, trade.netProfit);
-      currentFlatPeriod = 0;
     } else {
       evenTrades++;
       consecutiveWins = 0;
       consecutiveLosses = 0;
-      currentFlatPeriod++;
-      longestFlatPeriod = Math.max(longestFlatPeriod, currentFlatPeriod);
     }
 
-    maxShares = Math.max(maxShares, trade.size);
-
-    // Update drawdown and runup
+    // Update drawdown
     if (balance > peakBalance) {
       peakBalance = balance;
-      currentDrawdown = 0;
-      currentDrawdownDuration = 0;
-      currentRunup = peakBalance - troughBalance;
-      currentRunupDuration++;
-      if (currentRunup > maxRunup) {
-        maxRunup = currentRunup;
-        maxRunupDate = trade.exitDate.toDate();
+      if (currentDrawdown > 0) {
+        totalDrawdownAmount += currentDrawdown;
+        totalDrawdownPeriod += index - drawdownCount;
+        drawdownCount = index;
       }
-      longestRunupDuration = Math.max(longestRunupDuration, currentRunupDuration);
-    } else if (balance < troughBalance) {
-      troughBalance = balance;
-      currentRunup = 0;
-      currentRunupDuration = 0;
+      currentDrawdown = 0;
+    } else {
       currentDrawdown = peakBalance - balance;
-      currentDrawdownDuration++;
       if (currentDrawdown > maxDrawdown) {
         maxDrawdown = currentDrawdown;
+        maxDrawdownAmount = currentDrawdown;
         maxDrawdownDate = trade.exitDate.toDate();
       }
-      longestDrawdownDuration = Math.max(longestDrawdownDuration, currentDrawdownDuration);
-    } else {
-      currentDrawdownDuration++;
-      currentRunupDuration++;
     }
 
-    // Calculate monthly returns
+    if (balance < troughBalance) {
+      troughBalance = balance;
+    }
+
+    // Calculate monthly and yearly returns
     const tradeMonth = trade.exitDate.toDate().getMonth();
     const tradeYear = trade.exitDate.toDate().getFullYear();
 
@@ -207,103 +200,174 @@ export const calculateTradingMetrics = (trades, initialCapital) => {
       });
       currentMonthProfit = trade.netProfit;
       currentMonthStartBalance = balance - trade.netProfit;
+
+      if (tradeYear !== currentYear) {
+        yearlyReturns.push({
+          year: currentYear,
+          return: currentYearProfit / currentYearStartBalance
+        });
+        currentYearProfit = trade.netProfit;
+        currentYearStartBalance = balance - trade.netProfit;
+        currentYear = tradeYear;
+      }
+
       currentMonth = tradeMonth;
-      currentYear = tradeYear;
     } else {
       currentMonthProfit += trade.netProfit;
+      currentYearProfit += trade.netProfit;
     }
   });
 
-  // Add the last month's return
+  // Add the last month's and year's return
   monthlyReturns.push({
     date: new Date(currentYear, currentMonth),
     return: currentMonthProfit / currentMonthStartBalance
+  });
+  yearlyReturns.push({
+    year: currentYear,
+    return: currentYearProfit / currentYearStartBalance
   });
 
   const totalTrades = trades.length;
   const profitFactor = grossProfit / grossLoss;
   const percentProfitable = (winningTrades / totalTrades) * 100;
   const avgTradeNetProfit = totalNetProfit / totalTrades;
+  const medianTradeNetProfit = calculateMedian(allTradeNetProfits);
   const avgWinningTrade = grossProfit / winningTrades;
   const avgLosingTrade = grossLoss / losingTrades;
+  const medianWinningTrade = calculateMedian(allTradeNetProfits.filter(profit => profit > 0));
+  const medianLosingTrade = calculateMedian(allTradeNetProfits.filter(profit => profit < 0));
   const ratioAvgWinAvgLoss = Math.abs(avgWinningTrade / avgLosingTrade);
 
-  const annualReturnRate = (Math.pow((balance / initialCapital), (365 / totalTradingDays)) - 1) * 100;
+  const cagr = (Math.pow((balance / initialCapital), (1 / totalTradingYears)) - 1) * 100;
   const returnOnInitialCapital = (totalNetProfit / initialCapital) * 100;
 
   // Calculate average monthly return and standard deviation
   const avgMonthlyReturn = monthlyReturns.reduce((sum, month) => sum + month.return, 0) / monthlyReturns.length;
-  const stdDevMonthlyReturn = Math.sqrt(
-    monthlyReturns.reduce((sum, month) => sum + Math.pow(month.return - avgMonthlyReturn, 2), 0) / monthlyReturns.length
-  );
+  const stdDevMonthly = calculateStandardDeviation(monthlyReturns.map(month => month.return));
+  const stdDevAnnualized = stdDevMonthly * Math.sqrt(12);
 
-  // Calculate percentage of profitable months
-  const profitableMonths = monthlyReturns.filter(month => month.return > 0).length;
-  const percentProfitableMonths = (profitableMonths / monthlyReturns.length) * 100;
-
-  // Assuming risk-free rate of 2% for Sharpe and Sortino ratios
-  const riskFreeRate = 0.02;
-  const excessReturn = annualReturnRate / 100 - riskFreeRate;
-
-  // Sharpe Ratio
-  const sharpeRatio = excessReturn / (stdDevMonthlyReturn * Math.sqrt(12));
-
-  // Sortino Ratio (using downside deviation)
+  // Calculate downside deviation
   const downsideReturns = monthlyReturns.filter(month => month.return < 0);
-  const downsideDeviation = Math.sqrt(
-    downsideReturns.reduce((sum, month) => sum + Math.pow(month.return, 2), 0) / downsideReturns.length
-  ) * Math.sqrt(12);
-  const sortinoRatio = excessReturn / downsideDeviation;
+  const downsideDeviation = calculateStandardDeviation(downsideReturns.map(month => month.return));
 
-  // Sterling Ratio
-  const sterlingRatio = annualReturnRate / 100 / (maxDrawdown / initialCapital);
+  // Calculate best and worst years
+  const bestYear = Math.max(...yearlyReturns.map(year => year.return)) * 100;
+  const worstYear = Math.min(...yearlyReturns.map(year => year.return)) * 100;
 
-  // MAR Ratio
-  const marRatio = annualReturnRate / 100 / (maxDrawdown / initialCapital);
+  // Calculate Sharpe Ratio and Sortino Ratio
+  const riskFreeRate = 0.02; // Assuming 2% risk-free rate
+  const excessReturn = cagr / 100 - riskFreeRate;
+  const sharpeRatio = excessReturn / stdDevAnnualized;
+  const sortinoRatio = excessReturn / (downsideDeviation * Math.sqrt(12));
+
+  // Calculate skewness and kurtosis
+  const skewness = calculateSkewness(monthlyReturns.map(month => month.return));
+  const kurtosis = calculateKurtosis(monthlyReturns.map(month => month.return));
+
+  // Calculate Value at Risk (VaR) and Conditional VaR (CVaR)
+  // const historicalVaR = calculateHistoricalVaR(monthlyReturns.map(month => month.return), 0.05);
+  // const analyticalVaR = calculateAnalyticalVaR(avgMonthlyReturn, stdDevMonthly, 0.05);
+  // const cVaR = calculateConditionalVaR(monthlyReturns.map(month => month.return), 0.05);
+
+  // Calculate positive periods
+  const positivePeriods = monthlyReturns.filter(month => month.return > 0).length;
+  const positivePeriodsPct = (positivePeriods / monthlyReturns.length) * 100;
+
+  // Calculate gain/loss ratio
+  const gainLossRatio = Math.abs(avgWinningTrade / avgLosingTrade);
 
   return {
-    totalNetProfit,
-    grossProfit,
-    grossLoss,
-    profitFactor,
+    initialCapital: initialCapital,
+    endBalance: balance,
+    netProfit: totalNetProfit,
+    annualizedReturn: cagr,
+    standardDeviation: stdDevAnnualized,
+    bestYear,
+    worstYear,
+    maxDrawdownPct: (maxDrawdown / peakBalance) * 100,
+    maxDrawdownAmount,
+    maxDrawdownDate,
+    avgDrawdownAmount: totalDrawdownAmount / drawdownCount,
+    avgDrawdownPeriod: totalDrawdownPeriod / drawdownCount,
+    avgTradeNetProfit,
+    medianTradeNetProfit,
+    maxConsecutiveWins,
+    avgConsecutiveWins: totalConsecutiveWins / winStreaks,
+    maxConsecutiveLosses,
+    avgConsecutiveLosses: totalConsecutiveLosses / lossStreaks,
     totalTrades,
     winningTrades,
     losingTrades,
-    evenTrades,
-    percentProfitable,
-    avgTradeNetProfit,
-    avgWinningTrade,
-    avgLosingTrade,
-    ratioAvgWinAvgLoss,
-    largestWin,
-    largestLoss,
-    maxConsecutiveWins,
-    maxConsecutiveLosses,
-    tradingPeriod: totalTradingDays,
-    longestFlatPeriod,
-    maxShares,
-    maxDrawdown,
-    maxDrawdownDate,
-    maxDrawdownPercentage: (maxDrawdown / peakBalance) * 100,
-    longestDrawdownDuration,
-    recoveryFactor: Math.abs(totalNetProfit / maxDrawdown),
-    maxRunup,
-    maxRunupDate,
-    maxRunupPercentage: (maxRunup / troughBalance) * 100,
-    longestRunupDuration,
-    initialCapital,
-    finalCapital: balance,
-    returnOnInitialCapital,
-    annualReturnRate,
-    avgMonthlyReturn: avgMonthlyReturn * 100,
-    stdDevMonthlyReturn: stdDevMonthlyReturn * 100,
-    percentProfitableMonths,
+    winPct: percentProfitable,
+    avgWinAmount: avgWinningTrade,
+    medianWinAmount: medianWinningTrade,
+    avgLossAmount: Math.abs(avgLosingTrade),
+    medianLossAmount: Math.abs(medianLosingTrade),
+    stdDevMonthly,
+    stdDevAnnualized,
+    downsideDeviation,
     sharpeRatio,
     sortinoRatio,
-    sterlingRatio,
-    marRatio,
+    skewness,
+    kurtosis,
+    // historicalVaR,
+    // analyticalVaR,
+    // cVaR,
+    positivePeriods: `${positivePeriods} out of ${monthlyReturns.length} months (${positivePeriodsPct.toFixed(2)}%)`,
+    gainLossRatio,
   };
 };
+
+// Helper functions (implement these separately)
+function calculateMedian(arr) {
+  const sorted = arr.slice().sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  if (sorted.length % 2 === 0) {
+    return (sorted[middle - 1] + sorted[middle]) / 2;
+  }
+  return sorted[middle];
+}
+
+function calculateStandardDeviation(arr) {
+  const n = arr.length;
+  const mean = arr.reduce((a, b) => a + b) / n;
+  return Math.sqrt(arr.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / n);
+}
+
+function calculateSkewness(arr) {
+  const n = arr.length;
+  const mean = arr.reduce((a, b) => a + b) / n;
+  const m3 = arr.map(x => Math.pow(x - mean, 3)).reduce((a, b) => a + b) / n;
+  const m2 = arr.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / n;
+  return m3 / Math.pow(m2, 3/2);
+}
+
+function calculateKurtosis(arr) {
+  const n = arr.length;
+  const mean = arr.reduce((a, b) => a + b) / n;
+  const m4 = arr.map(x => Math.pow(x - mean, 4)).reduce((a, b) => a + b) / n;
+  const m2 = arr.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / n;
+  return m4 / Math.pow(m2, 2) - 3;
+}
+
+function calculateHistoricalVaR(returns, confidence) {
+  const sorted = returns.slice().sort((a, b) => a - b);
+  const index = Math.floor(confidence * sorted.length);
+  return -sorted[index];
+}
+
+function calculateAnalyticalVaR(mean, stdDev, confidence) {
+  const z = normalInverse(confidence);
+  return -(mean + z * stdDev);
+}
+
+function calculateConditionalVaR(returns, confidence) {
+  const sorted = returns.slice().sort((a, b) => a - b);
+  const index = Math.floor(confidence * sorted.length);
+  const cVaRValues = sorted.slice(0, index);
+  return -cVaRValues.reduce((a, b) => a + b) / cVaRValues.length;
+}
 
 export const processData = (
   columnLabels,

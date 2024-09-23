@@ -29,6 +29,7 @@ import { doc, Timestamp, updateDoc, writeBatch } from "firebase/firestore";
 
 const StrategyConfig = ({ strategy, trades }) => {
   const [initialCapital, setInitialCapital] = useState(parseFloat(strategy.metrics.initialCapital));
+  const [selectedBenchmark, setSelectedBenchmark] = useState(strategy.benchmark);
   const firestore = useFirestore();
 
   const reprocessData = async () => {
@@ -43,6 +44,7 @@ const StrategyConfig = ({ strategy, trades }) => {
       // Update the existing strategy document
       await updateDoc(strategyDocRef, {
         metrics: metrics,
+        benchmark: selectedBenchmark,
         updatedAt: Timestamp.now(), // Track when the update occurred
       });
 
@@ -96,7 +98,7 @@ const StrategyConfig = ({ strategy, trades }) => {
                   </Tooltip>
                 </TooltipProvider>
               </div>
-              <Select>
+              <Select value={selectedBenchmark} onValueChange={(value) => setSelectedBenchmark(value)}>
                 <SelectTrigger className="" defaultValue="none">
                   <SelectValue placeholder="Select a benchmark" />
                 </SelectTrigger>
@@ -110,6 +112,9 @@ const StrategyConfig = ({ strategy, trades }) => {
                     <SelectLabel className="mt-1">
                       Benchmark Portfolio
                     </SelectLabel>
+                    <SelectItem className="ml-5" value="spy">
+                      SPY
+                    </SelectItem>
                     <SelectItem className="ml-5" value="v500index">
                       Vanguard 500 Index Investor
                     </SelectItem>

@@ -17,22 +17,31 @@ const MonthlyReturnsGraph = ({ strategy, trades, dataInDollars = false }) => {
     }
 
     const monthlyData = {};
+    
+    // Find the earliest and latest dates
+    const dates = trades.map(trade => new Date(trade.exitDate.toDate()));
+    const minDate = new Date(Math.min.apply(null, dates));
+    const maxDate = new Date(Math.max.apply(null, dates));
+    
+    // Create entries for all months between minDate and maxDate
+    let currentDate = new Date(minDate.getFullYear(), minDate.getMonth(), 1);
+    while (currentDate <= maxDate) {
+      const period = `${currentDate.getMonth() + 1}/${currentDate.getFullYear()}`;
+      monthlyData[period] = {
+        period,
+        netProfit: 0,
+        maxRunup: 0,
+        maxDrawdown: 0,
+        runningProfit: 0,
+        peakProfit: 0,
+        lowestProfit: 0,
+      };
+      currentDate.setMonth(currentDate.getMonth() + 1);
+    }
 
     trades.forEach((trade) => {
       const date = new Date(trade.exitDate.toDate());
       const period = `${date.getMonth() + 1}/${date.getFullYear()}`;
-
-      if (!monthlyData[period]) {
-        monthlyData[period] = {
-          period,
-          netProfit: 0,
-          maxRunup: 0,
-          maxDrawdown: 0,
-          runningProfit: 0,
-          peakProfit: 0,
-          lowestProfit: 0,
-        };
-      }
 
       const tradeProfit = trade.netProfit;
       monthlyData[period].netProfit += tradeProfit;
@@ -137,23 +146,11 @@ const MonthlyReturnsGraph = ({ strategy, trades, dataInDollars = false }) => {
             fontSize={14}
           />
           <Tooltip content={<CustomTooltip />} />
-          {/* <Bar
-            dataKey={dataInDollars ? "maxDrawdown" : "percentMaxDrawdown"}
-            stackId="a"
-            fill="#F95F62"
-            fillOpacity={0.25}
-          /> */}
           <Bar
             dataKey={dataInDollars ? "netProfit" : "percentNetProfit"}
             stackId="a"
             fill="#097EF2"
           />
-          {/* <Bar
-            dataKey={dataInDollars ? "maxRunup" : "percentMaxRunup"}
-            stackId="a"
-            fill="#50E2B0"
-            fillOpacity={0.25}
-          /> */}
         </BarChart>
       </ResponsiveContainer>
     </div>

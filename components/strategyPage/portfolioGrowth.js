@@ -8,6 +8,7 @@ import {
   Tooltip,
   CartesianGrid,
   ResponsiveContainer,
+  ReferenceLine,
 } from "recharts";
 
 const PortfolioGrowth = ({ strategy, trades, plotByTrade = false }) => {
@@ -35,7 +36,9 @@ const PortfolioGrowth = ({ strategy, trades, plotByTrade = false }) => {
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
-      const xValue = plotByTrade ? `Trade ${label}` : new Date(label).toLocaleDateString();
+      const xValue = plotByTrade
+        ? `Trade ${label}`
+        : new Date(label).toLocaleDateString();
       return (
         <div className="bg-white dark:bg-gray-800 p-4 border border-gray-300 dark:border-gray-700 rounded-md shadow-lg">
           <p className="text-gray-700 dark:text-white font-medium">{xValue}</p>
@@ -71,10 +74,49 @@ const PortfolioGrowth = ({ strategy, trades, plotByTrade = false }) => {
         dataKey: "date",
         type: "number",
         scale: "time",
-        domain: [Math.min(...data.map((d) => d.date)), Math.max(...data.map((d) => d.date))],
+        domain: [
+          Math.min(...data.map((d) => d.date)),
+          Math.max(...data.map((d) => d.date)),
+        ],
         tickFormatter: dateFormatter,
         interval: Math.floor(data.length / 12),
       };
+
+  // Function to generate reference lines every 5 years, starting from Jan 1st
+  // Memoized reference lines to avoid full re-render
+  const referenceLines = useMemo(() => {
+    if (plotByTrade) return []; // Don't show reference lines in trade mode
+
+    const startDate = new Date(Math.min(...data.map((d) => d.date)));
+    const endDate = new Date(Math.max(...data.map((d) => d.date)));
+    const lines = [];
+
+    let currentDate = new Date(startDate.getFullYear(), 0, 1); // January 1st of the start year
+    const yearsSince1970 = currentDate.getFullYear() - 1970;
+    const yearsToAdd = 5 - (yearsSince1970 % 5);
+    currentDate.setFullYear(currentDate.getFullYear() + yearsToAdd);
+
+    while (currentDate <= endDate) {
+      if (currentDate >= startDate) {
+        lines.push(
+          <ReferenceLine
+            key={currentDate.getTime()}
+            x={currentDate.getTime()}
+            stroke="#888"
+            strokeDasharray="3 3"
+            label={{
+              value: currentDate.getFullYear(),
+              position: "top",
+              fill: "#888",
+            }}
+          />
+        );
+      }
+      currentDate.setFullYear(currentDate.getFullYear() + 5);
+    }
+
+    return lines;
+  }, [plotByTrade, data]);
 
   return (
     <div className="rounded-xl shadow-2xl dark:border w-full bg-white dark:bg-black py-6 px-10">
@@ -98,11 +140,7 @@ const PortfolioGrowth = ({ strategy, trades, plotByTrade = false }) => {
             </linearGradient>
           </defs>
           <CartesianGrid vertical={false} />
-          <XAxis
-            {...xAxisProps}
-            fontSize={12}
-            tickMargin={5}
-          />
+          <XAxis {...xAxisProps} fontSize={12} tickMargin={5} />
           <YAxis
             dataKey="equity"
             domain={["auto", "auto"]}
@@ -115,6 +153,7 @@ const PortfolioGrowth = ({ strategy, trades, plotByTrade = false }) => {
             fontSize={14}
           />
           <Tooltip content={<CustomTooltip />} />
+          {/* {referenceLines} */}
           <Area
             type="linear"
             dataKey="equity"

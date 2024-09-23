@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -9,12 +9,55 @@ import {
 } from "../ui/table";
 import numeral from "numeral";
 
-const AnnualReturns = ({ strategy }) => {
+// Helper function to calculate annual returns
+const calculateAnnualReturns = (trades, initialCapital) => {
+  const annualReturns = {};
+
+  trades.forEach((trade) => {
+    const year = trade.exitYear;
+    const profit = trade.netProfit;
+
+    if (!annualReturns[year]) {
+      annualReturns[year] = {
+        netProfit: 0,
+        startEquity: 0,
+        endEquity: 0,
+      };
+    }
+
+    // Add profit for the year
+    annualReturns[year].netProfit += profit;
+  });
+
+  // Sort years and calculate cumulative equity
+  const sortedYears = Object.keys(annualReturns).sort();
+  let cumulativeEquity = initialCapital;
+
+  sortedYears.forEach((year) => {
+    annualReturns[year].startEquity = cumulativeEquity;
+    annualReturns[year].endEquity = cumulativeEquity + annualReturns[year].netProfit;
+    cumulativeEquity = annualReturns[year].endEquity;
+  });
+
+  // Convert the object to an array for easier display
+  return sortedYears.map((year) => ({
+    year: year,
+    ...annualReturns[year],
+  }));
+};
+
+const AnnualReturns = ({ strategy, trades }) => {
   const [currentPage, setCurrentPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(12);
 
+  // Calculate the annual returns based on trades and initial capital
+  const annualReturns = useMemo(() => 
+    calculateAnnualReturns(trades, strategy.metrics.initialCapital), 
+    [trades, strategy.metrics.initialCapital]
+  );
+
   // Reverse the data to start from the most recent year
-  const reversedData = [...strategy.annualReturns].reverse();
+  const reversedData = [...annualReturns].reverse();
 
   // Slice data for pagination
   const paginatedData = reversedData.slice(
@@ -45,48 +88,23 @@ const AnnualReturns = ({ strategy }) => {
       <Table className="w-full table-fixed">
         <TableHeader>
           <TableRow>
-            <TableHead colSpan={2} className="text-right"></TableHead>
-            <TableHead
-              colSpan={3}
-              className="text-left font-bold border-l border-r"
-            >
-              Dual Momentum Model
-            </TableHead>
-            <TableHead
-              colSpan={3}
-              className="text-left font-bold border-l border-r"
-            >
-              Vanguard 500 Index Investor
-            </TableHead>
-          </TableRow>
-          <TableRow>
             <TableHead className="w-16 font-bold">Year</TableHead>
-            <TableHead className="font-bold">Inflation</TableHead>
-            <TableHead colSpan={2} className="border-r-0 font-bold">
-              Return
-            </TableHead>
-            <TableHead className="border border-l-0 font-bold">
-              Balance
-            </TableHead>
-            <TableHead colSpan={2} className="border border-r-0 font-bold">
-              Return
-            </TableHead>
-            <TableHead className="border border-l-0 font-bold">
-              Balance
-            </TableHead>
+            <TableHead className="font-bold">Net Profit</TableHead>
+            <TableHead className="font-bold">Start Equity</TableHead>
+            <TableHead className="font-bold">End Equity</TableHead>
+            <TableHead className="font-bold">Annual Return (%)</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {paginatedData.map((item, index) => (
             <TableRow key={index} className="odd:bg-gray-100 dark:odd:bg-gray-800">
-              <TableCell>{item.period}</TableCell>
-              <TableCell>2.5%</TableCell> {/* Replace with actual inflation data if available */}
-              <TableCell className="w-20">
+              <TableCell>{item.year}</TableCell>
+              <TableCell>{numeral(item.netProfit).format("$0,0.00")}</TableCell>
+              <TableCell>{numeral(item.startEquity).format("$0,0.00")}</TableCell>
+              <TableCell>{numeral(item.endEquity).format("$0,0.00")}</TableCell>
+              <TableCell>
                 {((item.endEquity / item.startEquity - 1) * 100).toFixed(2)}%
               </TableCell>
-              <TableCell>{numeral(item.netProfit).format("$0,0")}</TableCell>
-              <TableCell>{numeral(item.endEquity).format("$0,0")}</TableCell>
-              <TableCell colSpan={3}></TableCell>
             </TableRow>
           ))}
         </TableBody>
