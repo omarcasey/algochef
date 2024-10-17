@@ -79,6 +79,8 @@ const Import = () => {
   const [formatName, setFormatName] = useState("");
   const [strategyName, setStrategyName] = useState("");
   const [isClearingFormat, setisClearingFormat] = useState(false);
+  const [subtractCommissionSlippage, setSubtractCommissionSlippage] =
+    useState(false);
   const { toast } = useToast();
   const router = useRouter();
 
@@ -88,17 +90,17 @@ const Import = () => {
 
   const instrumentsQuery = query(
     collection(firestore, "instruments"),
-    where("userId", "==", user ? user.uid : "")
+    where("userId", "in", [user?.uid, "system"])
   );
 
   const timeframesQuery = query(
     collection(firestore, "timeframes"),
-    where("userId", "==", user ? user.uid : "")
+    where("userId", "in", [user?.uid, "system"])
   );
 
   const formatsQuery = query(
     collection(firestore, "formats"),
-    where("userId", "==", user ? user.uid : "")
+    where("userId", "in", [user?.uid, "system"])
   );
 
   const { data: instruments, status: instrumentsStatus } =
@@ -346,8 +348,28 @@ const Import = () => {
         return;
       }
 
+      // Find the full instrument object from the instruments array
+      const selectedInstrumentObject = instruments.find(
+        (instrument) => instrument.id === selectedInstrument
+      );
+
+      if (!selectedInstrumentObject) {
+        toast({
+          variant: "destructive",
+          title: "Instrument not found",
+          description: "The selected instrument could not be found.",
+        });
+        return;
+      }
+
       // Process trade data
-      const trades = processTradeData(columnLabels, data, selectedPositionType);
+      const trades = processTradeData(
+        columnLabels,
+        data,
+        selectedPositionType,
+        selectedInstrumentObject,
+        subtractCommissionSlippage
+      );
       const metrics = calculateTradingMetrics(trades, 10000);
       const monthlyReturns = null;
       const annualReturns = null;
@@ -393,7 +415,6 @@ const Import = () => {
 
       // Redirect to strategy page
       router.push(`/app/strategies/${strategyDoc.id}`);
-
     } catch (error) {
       console.error("Import error:", error.message);
       toast({
@@ -451,16 +472,24 @@ const Import = () => {
               <SelectContent>
                 <SelectGroup>
                   <SelectLabel className="">Select an Instrument</SelectLabel>
-                  <SelectItem value="ex1">Example 1</SelectItem>
-                  <SelectItem value="ex2">Example 2</SelectItem>
-                  <SelectItem value="ex3">Example 3</SelectItem>
                   <SelectSeparator />
                   <SelectLabel>Custom</SelectLabel>
-                  {instruments.map((instrument) => (
-                    <SelectItem key={instrument.id} value={instrument.id}>
-                      {instrument.name} - {instrument.symbol}
-                    </SelectItem>
-                  ))}
+                  {instruments
+                    .filter((instrument) => instrument.userId !== "system")
+                    .map((instrument) => (
+                      <SelectItem key={instrument.id} value={instrument.id}>
+                        {instrument.name} - {instrument.symbol}
+                      </SelectItem>
+                    ))}
+                  <SelectSeparator />
+                  <SelectLabel>Instruments</SelectLabel>
+                  {instruments
+                    .filter((instrument) => instrument.userId === "system")
+                    .map((instrument) => (
+                      <SelectItem key={instrument.id} value={instrument.id}>
+                        {instrument.name} - {instrument.symbol}
+                      </SelectItem>
+                    ))}
                 </SelectGroup>
               </SelectContent>
             </Select>
@@ -511,13 +540,15 @@ const Import = () => {
             </Select>
             <div className="flex flex-row items-center cursor-pointer">
               <Checkbox
-                id="comission"
+                id="commission"
                 className="mr-1 ml-4"
-                // checked={delimiters.tab}
-                // onCheckedChange={handleDelimiterChange("tab")}
                 disabled={loading}
+                checked={subtractCommissionSlippage}
+                onCheckedChange={(checked) =>
+                  setSubtractCommissionSlippage(checked)
+                }
               />
-              <Label className="cursor-pointer" htmlFor="comission">
+              <Label className="cursor-pointer" htmlFor="commission">
                 Subtract Comission & Slippage
               </Label>
             </div>

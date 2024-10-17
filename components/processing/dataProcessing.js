@@ -2,7 +2,7 @@ import Decimal from "decimal.js";
 import { Timestamp } from "firebase/firestore";
 import { mean, std } from "mathjs";
 
-export const processTradeData = (columnLabels, data, positionTypes) => {
+export const processTradeData = (columnLabels, data, positionTypes, instrument, subtractCommissionSlippage) => {
   const columns = Object.values(columnLabels);
   const rows = data;
 

@@ -53,14 +53,14 @@ const Instruments = () => {
     bpv: "",
     commission: "",
     slippage: "",
-    marginReq: "",
+    marginReq: "10000",
   });
   const [editingInstrument, setEditingInstrument] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const instrumentsQuery = query(
     collection(firestore, "instruments"),
-    where("userId", "==", user ? user.uid : "")
+    where("userId", "==", user?.uid)
   );
 
   const { data: instruments, status: instrumentsStatus } =
@@ -115,7 +115,7 @@ const Instruments = () => {
         bpv: "",
         commission: "",
         slippage: "",
-        marginReq: "",
+        marginReq: "10000",
       });
       toast({
         title: "Instrument added",
