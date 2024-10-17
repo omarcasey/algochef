@@ -487,7 +487,7 @@ const Import = () => {
                     .filter((instrument) => instrument.userId === "system")
                     .map((instrument) => (
                       <SelectItem key={instrument.id} value={instrument.id}>
-                        {instrument.name} - {instrument.symbol}
+                        @{instrument.symbol} - {instrument.name}
                       </SelectItem>
                     ))}
                 </SelectGroup>

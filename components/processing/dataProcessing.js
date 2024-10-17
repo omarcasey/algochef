@@ -38,19 +38,19 @@ export const processTradeData = (columnLabels, data, positionTypes, instrument, 
       return null;
     }
 
-    const entryPrice = parseFloat(row[columns.indexOf("Entry Price")]);
-    const exitPrice = parseFloat(row[columns.indexOf("Exit Price")]);
-    const size = parseInt(row[columns.indexOf("Size")]) || 1;
+    const entryPrice = new Decimal(row[columns.indexOf("Entry Price")]);
+    const exitPrice = new Decimal(row[columns.indexOf("Exit Price")]);
+    const size = new Decimal(row[columns.indexOf("Size")] || 1);
 
     let positionType;
-    let netProfit;
+    let rawProfit;
 
     if (positionTypes === "long") {
       positionType = "long";
-      netProfit = (exitPrice - entryPrice) * size;
+      rawProfit = exitPrice.minus(entryPrice);
     } else if (positionTypes === "short") {
       positionType = "short";
-      netProfit = (entryPrice - exitPrice) * size;
+      rawProfit = entryPrice.minus(exitPrice);
     } else if (positionTypes === "both") {
       const longShortIndex = columns.indexOf("Long/Short");
       if (longShortIndex === -1) {
@@ -59,9 +59,9 @@ export const processTradeData = (columnLabels, data, positionTypes, instrument, 
       }
       positionType = row[longShortIndex].toLowerCase();
       if (positionType === "long") {
-        netProfit = (exitPrice - entryPrice) * size;
+        rawProfit = exitPrice.minus(entryPrice);
       } else if (positionType === "short") {
-        netProfit = (entryPrice - exitPrice) * size;
+        rawProfit = entryPrice.minus(exitPrice);
       } else {
         console.warn(`Unknown position type '${positionType}'`);
         return null;
@@ -71,19 +71,29 @@ export const processTradeData = (columnLabels, data, positionTypes, instrument, 
       return null;
     }
 
+    // Calculate net profit
+    let netProfit = rawProfit.times(instrument.bpv).times(size);
+
+    // Subtract commission and slippage if the flag is true
+    if (subtractCommissionSlippage) {
+      const totalCommission = new Decimal(instrument.commission).times(size);
+      const totalSlippage = new Decimal(instrument.slippage).times(size);
+      netProfit = netProfit.minus(totalCommission).minus(totalSlippage);
+    }
+
     return {
       entryDate: Timestamp.fromDate(entryDate),
       entryTime: entryTimeStr,
-      entryPrice,
+      entryPrice: entryPrice.toNumber(),
       exitDate: Timestamp.fromDate(exitDate),
       exitTime: exitTimeStr,
-      exitPrice,
+      exitPrice: exitPrice.toNumber(),
       exitYear: exitDate.getFullYear(),
       exitMonth: exitDate.getMonth() + 1,
       exitDay: exitDate.getDate(),
-      size,
+      size: size.toNumber(),
       positionType,
-      netProfit,
+      netProfit: netProfit.toNumber(),
     };
   }).filter(trade => trade !== null);
 
