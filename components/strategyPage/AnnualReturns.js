@@ -8,6 +8,7 @@ import {
   TableRow,
 } from "../ui/table";
 import numeral from "numeral";
+import { inflationData } from "../helper/inflationData"; // Import your inflation data
 
 // Helper function to calculate annual returns
 const calculateAnnualReturns = (trades, initialCapital) => {
@@ -22,6 +23,7 @@ const calculateAnnualReturns = (trades, initialCapital) => {
         netProfit: 0,
         startEquity: 0,
         endEquity: 0,
+        inflation: inflationData[year] || 0, // Use actual inflation data
       };
     }
 
@@ -35,7 +37,8 @@ const calculateAnnualReturns = (trades, initialCapital) => {
 
   sortedYears.forEach((year) => {
     annualReturns[year].startEquity = cumulativeEquity;
-    annualReturns[year].endEquity = cumulativeEquity + annualReturns[year].netProfit;
+    annualReturns[year].endEquity =
+      cumulativeEquity + annualReturns[year].netProfit;
     cumulativeEquity = annualReturns[year].endEquity;
   });
 
@@ -51,8 +54,8 @@ const AnnualReturns = ({ strategy, trades }) => {
   const [rowsPerPage, setRowsPerPage] = useState(12);
 
   // Calculate the annual returns based on trades and initial capital
-  const annualReturns = useMemo(() => 
-    calculateAnnualReturns(trades, strategy.metrics.initialCapital), 
+  const annualReturns = useMemo(
+    () => calculateAnnualReturns(trades, strategy.metrics.initialCapital),
     [trades, strategy.metrics.initialCapital]
   );
 
@@ -89,21 +92,38 @@ const AnnualReturns = ({ strategy, trades }) => {
         <TableHeader>
           <TableRow>
             <TableHead className="w-16 font-bold">Year</TableHead>
-            <TableHead className="font-bold">Net Profit</TableHead>
-            <TableHead className="font-bold">Start Equity</TableHead>
-            <TableHead className="font-bold">End Equity</TableHead>
-            <TableHead className="font-bold">Annual Return (%)</TableHead>
+            <TableHead className="w-24 font-bold text-right">
+              Inflation
+            </TableHead>
+            <TableHead className="font-bold text-right">
+              Annual Return (%)
+            </TableHead>
+            <TableHead className="font-bold text-right">Net Profit</TableHead>
+            <TableHead className="font-bold text-right">Start Equity</TableHead>
+            <TableHead className="font-bold text-right">End Equity</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {paginatedData.map((item, index) => (
-            <TableRow key={index} className="odd:bg-gray-100 dark:odd:bg-gray-800">
+            <TableRow
+              key={index}
+              className="odd:bg-gray-100 dark:odd:bg-gray-800"
+            >
               <TableCell>{item.year}</TableCell>
-              <TableCell>{numeral(item.netProfit).format("$0,0.00")}</TableCell>
-              <TableCell>{numeral(item.startEquity).format("$0,0.00")}</TableCell>
-              <TableCell>{numeral(item.endEquity).format("$0,0.00")}</TableCell>
-              <TableCell>
+              <TableCell className=" text-right">
+                {item.inflation.toFixed(2)}%
+              </TableCell>
+              <TableCell className="text-right">
                 {((item.endEquity / item.startEquity - 1) * 100).toFixed(2)}%
+              </TableCell>
+              <TableCell className=" text-right">
+                {numeral(item.netProfit).format("$0,0.00")}
+              </TableCell>
+              <TableCell className=" text-right">
+                {numeral(item.startEquity).format("$0,0.00")}
+              </TableCell>
+              <TableCell className=" text-right">
+                {numeral(item.endEquity).format("$0,0.00")}
               </TableCell>
             </TableRow>
           ))}

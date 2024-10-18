@@ -23,7 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "../ui/button";
-import { calculateTradingMetrics, processData, processData2, processTradeData } from "../processing/dataProcessing";
+import { calculateTradingMetrics } from "../processing/dataProcessing";
 import { useFirestore } from "reactfire";
 import { doc, Timestamp, updateDoc, writeBatch } from "firebase/firestore";
 

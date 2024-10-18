@@ -46,10 +46,6 @@ import {
 import { useFirestore, useFirestoreCollectionData, useUser } from "reactfire";
 import { useToast } from "@/components/ui/use-toast";
 import {
-  calculateTradeDistribution,
-  processData,
-  processData2,
-  processData3,
   processTradeData,
   calculateTradingMetrics,
 } from "@/components/processing/dataProcessing";
@@ -478,7 +474,7 @@ const Import = () => {
                     .filter((instrument) => instrument.userId !== "system")
                     .map((instrument) => (
                       <SelectItem key={instrument.id} value={instrument.id}>
-                        {instrument.name} - {instrument.symbol}
+                        @{instrument.symbol} - {instrument.name}
                       </SelectItem>
                     ))}
                   <SelectSeparator />

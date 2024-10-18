@@ -34,28 +34,28 @@ const Summary = ({ strategy }) => {
           </TableRow>
         </TableHeader>
         <TableBody>
-          <TableRow className="even:bg-gray-100 dark:even:bg-gray-800">
+          <TableRow className="odd:bg-gray-100 dark:odd:bg-gray-800">
             <TableCell className="font-medium">Start Balance</TableCell>
             <TableCell className="text-right">
               {numeral(strategy?.metrics?.initialCapital).format("$0,0")}
             </TableCell>
             <TableCell className="text-right">$10,000</TableCell>
           </TableRow>
-          <TableRow className="even:bg-gray-100 dark:even:bg-gray-800">
+          <TableRow className="odd:bg-gray-100 dark:odd:bg-gray-800">
             <TableCell className="font-medium">End Balance</TableCell>
             <TableCell className="text-right">
               {numeral(strategy?.metrics?.endBalance).format("$0,0")}
             </TableCell>
             <TableCell className="text-right">$90,228</TableCell>
           </TableRow>
-          <TableRow className="even:bg-gray-100 dark:even:bg-gray-800">
+          <TableRow className="odd:bg-gray-100 dark:odd:bg-gray-800">
             <TableCell className="font-medium">Net Profit</TableCell>
             <TableCell className="text-right">
               {numeral(strategy?.metrics?.netProfit).format("$0,0")}
             </TableCell>
             <TableCell className="text-right">$90,228</TableCell>
           </TableRow>
-          <TableRow className="even:bg-gray-100 dark:even:bg-gray-800">
+          <TableRow className="odd:bg-gray-100 dark:odd:bg-gray-800">
             <TableCell className="font-medium">
               Annualized Return (CAGR)
             </TableCell>
@@ -64,22 +64,22 @@ const Summary = ({ strategy }) => {
             </TableCell>
             <TableCell className="text-right">10.11%</TableCell>
           </TableRow>
-          <TableRow className="even:bg-gray-100 dark:even:bg-gray-800">
+          <TableRow className="odd:bg-gray-100 dark:odd:bg-gray-800">
             <TableCell className="font-medium">Standard Deviation</TableCell>
             <TableCell className="text-right">{numeral(strategy?.metrics?.stdDevAnnualized).format("0.00%")}</TableCell>
             <TableCell className="text-right">15.73%</TableCell>
           </TableRow>
-          <TableRow className="even:bg-gray-100 dark:even:bg-gray-800">
+          <TableRow className="odd:bg-gray-100 dark:odd:bg-gray-800">
             <TableCell className="font-medium">Best Year</TableCell>
             <TableCell className="text-right">{numeral(strategy?.metrics?.bestYear).format("0.00")}%</TableCell>
             <TableCell className="text-right">32.73%</TableCell>
           </TableRow>
-          <TableRow className="even:bg-gray-100 dark:even:bg-gray-800">
+          <TableRow className="odd:bg-gray-100 dark:odd:bg-gray-800">
             <TableCell className="font-medium">Worst Year</TableCell>
             <TableCell className="text-right">{numeral(strategy?.metrics?.worstYear).format("0.00")}%</TableCell>
             <TableCell className="text-right">-36.73%</TableCell>
           </TableRow>
-          <TableRow className="even:bg-gray-100 dark:even:bg-gray-800">
+          <TableRow className="odd:bg-gray-100 dark:odd:bg-gray-800">
             <TableCell className="font-medium">Maximum Drawdown</TableCell>
             <TableCell>
               <div className="flex items-center justify-end">
@@ -122,21 +122,21 @@ const Summary = ({ strategy }) => {
               </div>
             </TableCell>
           </TableRow>
-          <TableRow className="even:bg-gray-100 dark:even:bg-gray-800">
+          <TableRow className="odd:bg-gray-100 dark:odd:bg-gray-800">
             <TableCell className="font-medium">Sharpe Ratio</TableCell>
             <TableCell className="text-right">
               {numeral(strategy?.metrics?.sharpeRatio).format("0.00")}
             </TableCell>
             <TableCell className="text-right">0.61</TableCell>
           </TableRow>
-          <TableRow className="even:bg-gray-100 dark:even:bg-gray-800">
+          <TableRow className="odd:bg-gray-100 dark:odd:bg-gray-800">
             <TableCell className="font-medium">Sortino Ratio</TableCell>
             <TableCell className="text-right">
               {numeral(strategy?.metrics?.sortinoRatio).format("0.00")}
             </TableCell>
             <TableCell className="text-right">0.91</TableCell>
           </TableRow>
-          {/* <TableRow className="even:bg-gray-100 dark:even:bg-gray-800">
+          {/* <TableRow className="odd:bg-gray-100 dark:odd:bg-gray-800">
             <TableCell className="font-medium">Benchmark Correlation</TableCell>
             <TableCell className="text-right"></TableCell>
             <TableCell className="text-right">1.00</TableCell>

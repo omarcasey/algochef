@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from "react";
 import {
   Table,
   TableBody,
@@ -9,22 +9,69 @@ import {
 } from "../ui/table";
 import numeral from "numeral";
 
-const MonthlyReturns = ({ strategy }) => {
+// Helper function to calculate monthly returns
+const calculateMonthlyReturns = (trades, initialCapital) => {
+  const monthlyReturns = {};
+
+  trades.forEach((trade) => {
+    const year = trade.exitYear;
+    const month = trade.exitMonth;
+    const key = `${year}-${month.toString().padStart(2, "0")}`;
+    const profit = trade.netProfit;
+
+    if (!monthlyReturns[key]) {
+      monthlyReturns[key] = {
+        year,
+        month,
+        netProfit: 0,
+        startEquity: 0,
+        endEquity: 0,
+      };
+    }
+
+    // Add profit for the month
+    monthlyReturns[key].netProfit += profit;
+  });
+
+  // Sort months and calculate cumulative equity
+  const sortedMonths = Object.keys(monthlyReturns).sort();
+  let cumulativeEquity = initialCapital;
+
+  sortedMonths.forEach((key) => {
+    monthlyReturns[key].startEquity = cumulativeEquity;
+    monthlyReturns[key].endEquity =
+      cumulativeEquity + monthlyReturns[key].netProfit;
+    cumulativeEquity = monthlyReturns[key].endEquity;
+  });
+
+  // Convert the object to an array for easier display
+  return sortedMonths.map((key) => ({
+    ...monthlyReturns[key],
+  }));
+};
+
+const MonthlyReturns = ({ strategy, trades }) => {
   const [currentPage, setCurrentPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(12);
 
-  // Reverse the monthlyReturns array to show the most recent months first
-  const reversedReturns = [...strategy.monthlyReturns].reverse();
+  // Calculate the monthly returns based on trades and initial capital
+  const monthlyReturns = useMemo(
+    () => calculateMonthlyReturns(trades, strategy.metrics.initialCapital),
+    [trades, strategy.metrics.initialCapital]
+  );
+
+  // Reverse the data to start from the most recent month
+  const reversedData = [...monthlyReturns].reverse();
 
   // Slice data for pagination
-  const paginatedData = reversedReturns.slice(
+  const paginatedData = reversedData.slice(
     currentPage * rowsPerPage,
     currentPage * rowsPerPage + rowsPerPage
   );
 
   // Handle page change
-  const handlePageChange = (newPage) => {
-    setCurrentPage(newPage);
+  const handlePageChange = (selectedPage) => {
+    setCurrentPage(selectedPage.selected);
   };
 
   // Handle rows per page change
@@ -33,60 +80,52 @@ const MonthlyReturns = ({ strategy }) => {
     setCurrentPage(0); // Reset to first page
   };
 
-  const pageCount = Math.ceil(reversedReturns.length / rowsPerPage);
+  const pageCount = Math.ceil(reversedData.length / rowsPerPage);
   const startEntry = currentPage * rowsPerPage + 1;
-  const endEntry = Math.min(startEntry + rowsPerPage - 1, reversedReturns.length);
+  const endEntry = Math.min(startEntry + rowsPerPage - 1, reversedData.length);
 
   return (
     <div className="rounded-xl shadow-2xl dark:border w-full bg-white dark:bg-black py-6 px-10">
       <h1 className="text-xl text-blue-900 dark:text-white saturate-200 font-medium mb-6">
         Monthly Returns
       </h1>
-      <Table className="">
+      <Table className="w-full table-fixed">
         <TableHeader>
           <TableRow>
-            <TableHead colSpan={2} className="text-right"></TableHead>
-            <TableHead colSpan={3} className="text-left font-bold border-l border-r">
-              Dual Momentum Model
+            <TableHead className="w-20 font-bold">Year</TableHead>
+            <TableHead className="w-24 font-bold text-right">Month</TableHead>
+            <TableHead className="font-bold text-right">
+              Monthly Return (%)
             </TableHead>
-            <TableHead colSpan={3} className="text-left font-bold border-l border-r">
-              Vanguard 500 Index Investor
-            </TableHead>
-          </TableRow>
-          <TableRow>
-            <TableHead className="w-16 font-bold">Year</TableHead>
-            <TableHead className="font-bold">Month</TableHead>
-            <TableHead colSpan={2} className="border-r-0 font-bold">
-              Return
-            </TableHead>
-            <TableHead className="border border-l-0 font-bold">
-              Balance
-            </TableHead>
-            <TableHead colSpan={2} className="border-r-0 font-bold">
-              Return
-            </TableHead>
-            <TableHead className="border border-l-0 font-bold">
-              Balance
-            </TableHead>
+            <TableHead className="font-bold text-right">Net Profit</TableHead>
+            <TableHead className="font-bold text-right">Start Equity</TableHead>
+            <TableHead className="font-bold text-right">End Equity</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {paginatedData.map((item, index) => (
-            <TableRow key={index} className='odd:bg-gray-100 dark:odd:bg-gray-800'>
+            <TableRow
+              key={index}
+              className="odd:bg-gray-100 dark:odd:bg-gray-800"
+            >
               <TableCell>{item.year}</TableCell>
-              <TableCell>{item.month}</TableCell>
-              <TableCell className="w-20">
-                <p>{((item.endEquity / item.startEquity - 1) * 100).toFixed(2)}%</p>
+              <TableCell className="text-right">{item.month}</TableCell>
+              <TableCell className="text-right">
+                {((item.endEquity / item.startEquity - 1) * 100).toFixed(2)}%
               </TableCell>
-              <TableCell>{numeral(item.netProfit).format("$0,0")}</TableCell>
-              <TableCell>{numeral(item.endEquity).format("$0,0")}</TableCell>
-              <TableCell colSpan={3}></TableCell>
+              <TableCell className="text-right">
+                {numeral(item.netProfit).format("$0,0.00")}
+              </TableCell>
+              <TableCell className="text-right">
+                {numeral(item.startEquity).format("$0,0.00")}
+              </TableCell>
+              <TableCell className="text-right">
+                {numeral(item.endEquity).format("$0,0.00")}
+              </TableCell>
             </TableRow>
           ))}
         </TableBody>
       </Table>
-
-      {/* Pagination and controls */}
       <div className="flex flex-col mt-4">
         <div className="flex justify-between items-center mb-2">
           <div className="flex items-center text-sm">
@@ -104,41 +143,47 @@ const MonthlyReturns = ({ strategy }) => {
             <span className="ml-2">entries</span>
           </div>
           <div className="text-sm">
-            Showing {startEntry} to {endEntry} of {reversedReturns.length} entries
+            Showing {startEntry} to {endEntry} of {reversedData.length} entries
           </div>
           <div className="flex space-x-2">
             <button
-              onClick={() => handlePageChange(0)}
+              onClick={() => setCurrentPage(0)}
               disabled={currentPage === 0}
               className={`bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1 text-sm ${
-                currentPage === 0 ? "text-gray-400 cursor-not-allowed" : "cursor-pointer"
+                currentPage === 0 ? "text-gray-400 cursor-not-allowed" : ""
               }`}
             >
               First
             </button>
             <button
-              onClick={() => handlePageChange(currentPage - 1)}
+              onClick={() => setCurrentPage((prev) => Math.max(prev - 1, 0))}
               disabled={currentPage === 0}
               className={`bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1 text-sm ${
-                currentPage === 0 ? "text-gray-400 cursor-not-allowed" : "cursor-pointer"
+                currentPage === 0 ? "text-gray-400 cursor-not-allowed" : ""
               }`}
             >
               Previous
             </button>
             <button
-              onClick={() => handlePageChange(currentPage + 1)}
+              onClick={() =>
+                setCurrentPage((prev) => Math.min(prev + 1, pageCount - 1))
+              }
               disabled={currentPage >= pageCount - 1}
               className={`bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1 text-sm ${
-                currentPage >= pageCount - 1 ? "text-gray-400 cursor-not-allowed" : "cursor-pointer"
+                currentPage >= pageCount - 1
+                  ? "text-gray-400 cursor-not-allowed"
+                  : ""
               }`}
             >
               Next
             </button>
             <button
-              onClick={() => handlePageChange(pageCount - 1)}
+              onClick={() => setCurrentPage(pageCount - 1)}
               disabled={currentPage >= pageCount - 1}
               className={`bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-600 rounded-md px-3 py-1 text-sm ${
-                currentPage >= pageCount - 1 ? "text-gray-400 cursor-not-allowed" : "cursor-pointer"
+                currentPage >= pageCount - 1
+                  ? "text-gray-400 cursor-not-allowed"
+                  : ""
               }`}
             >
               Last

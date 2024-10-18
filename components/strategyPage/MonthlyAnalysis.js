@@ -107,7 +107,7 @@ const MonthlyAnalysis = ({ trades }) => {
           {data.map((row, index) => (
             <TableRow
               key={index}
-              className="hover:bg-gray-100 dark:hover:bg-gray-800"
+              className="odd:bg-gray-100 dark:odd:bg-gray-800"
             >
               <TableCell className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900 dark:text-white">
                 {row.period}
