@@ -1,6 +1,5 @@
 "use client";
-
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useUser } from "reactfire";
 import { useFirestore, useFirestoreCollectionData } from "reactfire";
 import {
@@ -68,19 +67,38 @@ const UserStrategies = () => {
   const [currentPage, setCurrentPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(12);
 
-  const [checkedItems, setCheckedItems] = useState({
-    netProfit: false,
-    maxDrawdown: false,
-    returnDrawdownRatio: false,
-    noOfTrades: false,
-    longShort: false,
+  const [checkedItems, setCheckedItems] = useState(() => {
+    // Try to load saved preferences from localStorage
+    const savedPreferences = localStorage.getItem("columnPreferences");
+    return savedPreferences
+      ? JSON.parse(savedPreferences)
+      : {
+          netProfit: false,
+          maxDrawdown: false,
+          returnDrawdownRatio: false,
+          noOfTrades: false,
+          longShort: false,
+        };
   });
 
+  // Save preferences to localStorage whenever they change
+  useEffect(() => {
+    localStorage.setItem("columnPreferences", JSON.stringify(checkedItems));
+  }, [checkedItems]);
+
   const handleItemClick = (key) => {
-    setCheckedItems((prev) => ({
-      ...prev,
-      [key]: !prev[key],
-    }));
+    setCheckedItems((prev) => {
+      const newCheckedItems = {
+        ...prev,
+        [key]: !prev[key],
+      };
+      // Save to localStorage immediately after updating
+      localStorage.setItem(
+        "columnPreferences",
+        JSON.stringify(newCheckedItems)
+      );
+      return newCheckedItems;
+    });
   };
 
   const handleItemSelect = (e) => {
@@ -190,20 +208,24 @@ const UserStrategies = () => {
           bValue = b[sortConfig.key].seconds;
           break;
         case "netProfit":
-          aValue = a.metrics?.["Total Net Profit"] || 0;
-          bValue = b.metrics?.["Total Net Profit"] || 0;
+          aValue = a.metrics?.netProfit || 0;
+          bValue = b.metrics?.netProfit || 0;
           break;
         case "maxDrawdown":
-          aValue = a.metrics?.["Max Drawdown $"] || 0;
-          bValue = b.metrics?.["Max Drawdown $"] || 0;
+          aValue = a.metrics?.maxDrawdownAmount || 0;
+          bValue = b.metrics?.maxDrawdownAmount || 0;
           break;
         case "noOfTrades":
-          aValue = a.metrics?.["Total Trades"] || 0;
-          bValue = b.metrics?.["Total Trades"] || 0;
+          aValue = a.metrics?.totalTrades || 0;
+          bValue = b.metrics?.totalTrades || 0;
           break;
         case "longShort":
           aValue = a.positionTypes?.toLowerCase() || "";
           bValue = b.positionTypes?.toLowerCase() || "";
+          break;
+        case "returnToDrawdownRatio":
+          aValue = a.metrics?.returnToDrawdownRatio || 0;
+          bValue = b.metrics?.returnToDrawdownRatio || 0;
           break;
         default:
           aValue = a[sortConfig.key]?.toLowerCase();
@@ -330,7 +352,17 @@ const UserStrategies = () => {
                 </TableHead>
               )}
               {checkedItems.returnDrawdownRatio && (
-                <TableHead>Return / Drawdown Ratio</TableHead>
+                <TableHead
+                  onClick={() => handleSort("returnToDrawdownRatio")}
+                  className="cursor-pointer"
+                >
+                  Return / Drawdown Ratio{" "}
+                  {sortConfig.key === "returnToDrawdownRatio"
+                    ? sortConfig.direction === "asc"
+                      ? "▲"
+                      : "▼"
+                    : ""}
+                </TableHead>
               )}
               {checkedItems.noOfTrades && (
                 <TableHead
@@ -371,61 +403,24 @@ const UserStrategies = () => {
                     <DropdownMenuContent>
                       <DropdownMenuLabel>Columns</DropdownMenuLabel>
                       <DropdownMenuSeparator />
-                      <DropdownMenuItem
-                        onSelect={handleItemSelect}
-                        onClick={() => handleItemClick("netProfit")}
-                        className="flex items-center"
-                      >
-                        <Checkbox
-                          checked={checkedItems.netProfit}
-                          className="w-3.5 h-3.5 mr-2"
-                        />
-                        Net Profit $
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onSelect={handleItemSelect}
-                        onClick={() => handleItemClick("maxDrawdown")}
-                        className="flex items-center"
-                      >
-                        <Checkbox
-                          checked={checkedItems.maxDrawdown}
-                          className="w-3.5 h-3.5 mr-2"
-                        />
-                        Maximum Drawdown $
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onSelect={handleItemSelect}
-                        onClick={() => handleItemClick("returnDrawdownRatio")}
-                        className="flex items-center"
-                      >
-                        <Checkbox
-                          checked={checkedItems.returnDrawdownRatio}
-                          className="w-3.5 h-3.5 mr-2"
-                        />
-                        Return / Drawdown Ratio
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onSelect={handleItemSelect}
-                        onClick={() => handleItemClick("noOfTrades")}
-                        className="flex items-center"
-                      >
-                        <Checkbox
-                          checked={checkedItems.noOfTrades}
-                          className="w-3.5 h-3.5 mr-2"
-                        />
-                        No. of Trades
-                      </DropdownMenuItem>
-                      <DropdownMenuItem
-                        onSelect={handleItemSelect}
-                        onClick={() => handleItemClick("longShort")}
-                        className="flex items-center"
-                      >
-                        <Checkbox
-                          checked={checkedItems.longShort}
-                          className="w-3.5 h-3.5 mr-2"
-                        />
-                        Long / Short
-                      </DropdownMenuItem>
+                      {Object.entries(checkedItems).map(([key, checked]) => (
+                        <DropdownMenuItem
+                          key={key}
+                          onSelect={handleItemSelect}
+                          onClick={() => handleItemClick(key)}
+                          className="flex items-center"
+                        >
+                          <Checkbox
+                            checked={checked}
+                            className="w-3.5 h-3.5 mr-2"
+                          />
+                          {key.charAt(0).toUpperCase() +
+                            key
+                              .slice(1)
+                              .replace(/([A-Z])/g, " $1")
+                              .trim()}
+                        </DropdownMenuItem>
+                      ))}
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </div>
@@ -470,7 +465,7 @@ const UserStrategies = () => {
                   {checkedItems.netProfit && (
                     <TableCell>
                       {(() => {
-                        const profit = strategy.metrics?.["Total Net Profit"];
+                        const profit = strategy.metrics?.netProfit;
                         if (profit === undefined) return "";
 
                         const isNegative = profit < 0;
@@ -497,8 +492,7 @@ const UserStrategies = () => {
                   {checkedItems.maxDrawdown && (
                     <TableCell>
                       {(() => {
-                        const maxDrawdown =
-                          strategy.metrics?.["Max Drawdown $"];
+                        const maxDrawdown = strategy.metrics?.maxDrawdownAmount;
                         if (maxDrawdown === undefined) return "";
 
                         const formattedDrawdown = numeral(
@@ -515,11 +509,13 @@ const UserStrategies = () => {
                   )}
                   {checkedItems.returnDrawdownRatio && (
                     <TableCell>
-                      {/* {numeral(strategy.metrics["Total Net Profit"]).format("$0,0")} */}
+                      {numeral(strategy.metrics?.returnToDrawdownRatio).format(
+                        "0.000"
+                      )}
                     </TableCell>
                   )}
                   {checkedItems.noOfTrades && (
-                    <TableCell>{strategy.metrics?.["Total Trades"]}</TableCell>
+                    <TableCell>{strategy.metrics?.totalTrades}</TableCell>
                   )}
                   {checkedItems.longShort && (
                     <TableCell>

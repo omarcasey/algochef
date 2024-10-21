@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -37,10 +37,19 @@ import { FaCheckCircle } from "react-icons/fa";
 import { Computer, Moon, Sun } from "lucide-react";
 
 const Sidebar = () => {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(() => {
+    // Try to load saved preference from localStorage
+    const savedState = localStorage.getItem('sidebarExpanded');
+    return savedState !== null ? JSON.parse(savedState) : true;
+  });
   const router = useRouter();
   const { data } = useUser();
   const { theme, setTheme } = useTheme();
+
+  // Save preference to localStorage whenever it changes
+  useEffect(() => {
+    localStorage.setItem('sidebarExpanded', JSON.stringify(isExpanded));
+  }, [isExpanded]);
 
   const doLogout = async () => {
     await signOut(getAuth());
@@ -110,6 +119,16 @@ const Sidebar = () => {
             <FiPieChart className={`mr-2 h-4 w-4 shrink-0`} />
             <p className={`${isExpanded ? "" : "hidden"} font-normal`}>
               Strategies
+            </p>
+          </Button>
+          <Button
+            variant={"ghost"}
+            className="w-full flex items-center justify-start"
+            onClick={() => router.push("/app/builder")}
+          >
+            <FiPieChart className={`mr-2 h-4 w-4 shrink-0`} />
+            <p className={`${isExpanded ? "" : "hidden"} font-normal`}>
+              Portfolio Builder
             </p>
           </Button>
           <Button

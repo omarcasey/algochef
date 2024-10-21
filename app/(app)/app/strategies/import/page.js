@@ -50,6 +50,7 @@ import {
   calculateTradingMetrics,
 } from "@/components/processing/dataProcessing";
 import { useRouter } from "next/navigation";
+import InstrumentSelect from "@/components/import/InstrumentSelect";
 
 const Import = () => {
   const [data, setData] = useState([]);
@@ -388,6 +389,7 @@ const Import = () => {
         timeframe: selectedTimeframe,
         positionTypes: selectedPositionType,
         metrics: metrics,
+        benchmark: "none",
       });
 
       // Use a batch write to add all trades
@@ -458,37 +460,11 @@ const Import = () => {
             </Button>
           </div>
           <div className="flex flex-row gap-3 mb-3">
-            <Select
-              value={selectedInstrument}
-              onValueChange={(value) => setSelectedInstrument(value)}
-            >
-              <SelectTrigger className="w-[14rem]">
-                <SelectValue placeholder="Instruments" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  <SelectLabel className="">Select an Instrument</SelectLabel>
-                  <SelectSeparator />
-                  <SelectLabel>Custom</SelectLabel>
-                  {instruments
-                    .filter((instrument) => instrument.userId !== "system")
-                    .map((instrument) => (
-                      <SelectItem key={instrument.id} value={instrument.id}>
-                        @{instrument.symbol} - {instrument.name}
-                      </SelectItem>
-                    ))}
-                  <SelectSeparator />
-                  <SelectLabel>Instruments</SelectLabel>
-                  {instruments
-                    .filter((instrument) => instrument.userId === "system")
-                    .map((instrument) => (
-                      <SelectItem key={instrument.id} value={instrument.id}>
-                        @{instrument.symbol} - {instrument.name}
-                      </SelectItem>
-                    ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
+            <InstrumentSelect
+              instruments={instruments}
+              selectedInstrument={selectedInstrument}
+              setSelectedInstrument={setSelectedInstrument}
+            />
             <Select
               value={selectedTimeframe}
               onValueChange={(value) => setSelectedTimeframe(value)}

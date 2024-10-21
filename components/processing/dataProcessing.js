@@ -2,7 +2,13 @@ import Decimal from "decimal.js";
 import { Timestamp } from "firebase/firestore";
 import { mean, std } from "mathjs";
 
-export const processTradeData = (columnLabels, data, positionTypes, instrument, subtractCommissionSlippage) => {
+export const processTradeData = (
+  columnLabels,
+  data,
+  positionTypes,
+  instrument,
+  subtractCommissionSlippage
+) => {
   const columns = Object.values(columnLabels);
   const rows = data;
 
@@ -13,95 +19,131 @@ export const processTradeData = (columnLabels, data, positionTypes, instrument, 
 
   const combineDateAndTime = (dateStr, timeStr) => {
     if (!dateStr) return null;
-    const [month, day, year] = dateStr.split('/').map(num => parseInt(num, 10));
-    let hours = 0, minutes = 0;
+    const [month, day, year] = dateStr
+      .split("/")
+      .map((num) => parseInt(num, 10));
+    let hours = 0,
+      minutes = 0;
     if (timeStr) {
-      let [time, period] = timeStr.split(' ');
-      [hours, minutes] = time.split(':').map(num => parseInt(num, 10));
-      if (period.toLowerCase() === 'pm' && hours !== 12) hours += 12;
-      if (period.toLowerCase() === 'am' && hours === 12) hours = 0;
+      let [time, period] = timeStr.split(" ");
+      [hours, minutes] = time.split(":").map((num) => parseInt(num, 10));
+      if (period.toLowerCase() === "pm" && hours !== 12) hours += 12;
+      if (period.toLowerCase() === "am" && hours === 12) hours = 0;
     }
     return new Date(year, month - 1, day, hours, minutes);
   };
 
-  const processedTrades = rows.map(row => {
-    const entryDateStr = row[columns.indexOf("Entry Date")];
-    const exitDateStr = row[columns.indexOf("Exit Date")];
-    const entryTimeStr = columns.includes("Entry Time") ? row[columns.indexOf("Entry Time")] : null;
-    const exitTimeStr = columns.includes("Exit Time") ? row[columns.indexOf("Exit Time")] : null;
+  const processedTrades = rows
+    .map((row) => {
+      const entryDateStr = row[columns.indexOf("Entry Date")];
+      const exitDateStr = row[columns.indexOf("Exit Date")];
+      const entryTimeStr = columns.includes("Entry Time")
+        ? row[columns.indexOf("Entry Time")]
+        : null;
+      const exitTimeStr = columns.includes("Exit Time")
+        ? row[columns.indexOf("Exit Time")]
+        : null;
 
-    const entryDate = combineDateAndTime(entryDateStr, entryTimeStr);
-    const exitDate = combineDateAndTime(exitDateStr, exitTimeStr);
+      const entryDate = combineDateAndTime(entryDateStr, entryTimeStr);
+      const exitDate = combineDateAndTime(exitDateStr, exitTimeStr);
 
-    if (!entryDate || !exitDate) {
-      console.error("Invalid date format", { entryDateStr, exitDateStr, entryTimeStr, exitTimeStr });
-      return null;
-    }
-
-    const entryPrice = new Decimal(row[columns.indexOf("Entry Price")]);
-    const exitPrice = new Decimal(row[columns.indexOf("Exit Price")]);
-    const size = new Decimal(row[columns.indexOf("Size")] || 1);
-
-    let positionType;
-    let rawProfit;
-
-    if (positionTypes === "long") {
-      positionType = "long";
-      rawProfit = exitPrice.minus(entryPrice);
-    } else if (positionTypes === "short") {
-      positionType = "short";
-      rawProfit = entryPrice.minus(exitPrice);
-    } else if (positionTypes === "both") {
-      const longShortIndex = columns.indexOf("Long/Short");
-      if (longShortIndex === -1) {
-        console.error("Long/Short column not found when positionTypes is 'both'");
+      if (!entryDate || !exitDate) {
+        console.error("Invalid date format", {
+          entryDateStr,
+          exitDateStr,
+          entryTimeStr,
+          exitTimeStr,
+        });
         return null;
       }
-      positionType = row[longShortIndex].toLowerCase();
-      if (positionType === "long") {
+
+      const entryPrice = new Decimal(row[columns.indexOf("Entry Price")]);
+      const exitPrice = new Decimal(row[columns.indexOf("Exit Price")]);
+      const size = new Decimal(row[columns.indexOf("Size")] || 1);
+
+      let positionType;
+      let rawProfit;
+
+      if (positionTypes === "long") {
+        positionType = "long";
         rawProfit = exitPrice.minus(entryPrice);
-      } else if (positionType === "short") {
+      } else if (positionTypes === "short") {
+        positionType = "short";
         rawProfit = entryPrice.minus(exitPrice);
+      } else if (positionTypes === "both") {
+        const longShortIndex = columns.indexOf("Long/Short");
+        if (longShortIndex === -1) {
+          console.error(
+            "Long/Short column not found when positionTypes is 'both'"
+          );
+          return null;
+        }
+        positionType = row[longShortIndex].toLowerCase();
+        if (positionType === "long") {
+          rawProfit = exitPrice.minus(entryPrice);
+        } else if (positionType === "short") {
+          rawProfit = entryPrice.minus(exitPrice);
+        } else {
+          console.warn(`Unknown position type '${positionType}'`);
+          return null;
+        }
       } else {
-        console.warn(`Unknown position type '${positionType}'`);
+        console.error(`Invalid positionTypes value '${positionTypes}'`);
         return null;
       }
-    } else {
-      console.error(`Invalid positionTypes value '${positionTypes}'`);
-      return null;
-    }
 
-    // Calculate net profit
-    let netProfit = rawProfit.times(instrument.bpv).times(size);
+      // Calculate net profit
+      let netProfit = rawProfit.times(instrument.bpv).times(size);
 
-    // Subtract commission and slippage if the flag is true
-    if (subtractCommissionSlippage) {
-      const totalCommission = new Decimal(instrument.commission).times(size);
-      const totalSlippage = new Decimal(instrument.slippage).times(size);
-      netProfit = netProfit.minus(totalCommission).minus(totalSlippage);
-    }
+      // Subtract commission and slippage if the flag is true
+      if (subtractCommissionSlippage) {
+        const totalCommission = new Decimal(instrument.commission).times(size);
+        const totalSlippage = new Decimal(instrument.slippage).times(size);
+        netProfit = netProfit.minus(totalCommission).minus(totalSlippage);
+      }
 
-    return {
-      entryDate: Timestamp.fromDate(entryDate),
-      entryTime: entryTimeStr,
-      entryPrice: entryPrice.toNumber(),
-      exitDate: Timestamp.fromDate(exitDate),
-      exitTime: exitTimeStr,
-      exitPrice: exitPrice.toNumber(),
-      exitYear: exitDate.getFullYear(),
-      exitMonth: exitDate.getMonth() + 1,
-      exitDay: exitDate.getDate(),
-      size: size.toNumber(),
-      positionType,
-      netProfit: netProfit.toNumber(),
-    };
-  }).filter(trade => trade !== null);
+      return {
+        entryDate: Timestamp.fromDate(entryDate),
+        entryTime: entryTimeStr,
+        entryPrice: entryPrice.toNumber(),
+        exitDate: Timestamp.fromDate(exitDate),
+        exitTime: exitTimeStr,
+        exitPrice: exitPrice.toNumber(),
+        exitYear: exitDate.getFullYear(),
+        exitMonth: exitDate.getMonth() + 1,
+        exitDay: exitDate.getDate(),
+        size: size.toNumber(),
+        positionType,
+        netProfit: netProfit.toNumber(),
+      };
+    })
+    .filter((trade) => trade !== null);
 
   // Sort the processed trades by exit date (oldest to newest)
-  return processedTrades.sort((a, b) => a.exitDate.toDate() - b.exitDate.toDate());
+  return processedTrades.sort(
+    (a, b) => a.exitDate.toDate() - b.exitDate.toDate()
+  );
 };
 
-export const calculateTradingMetrics = (trades, initialCapital) => {
+export const calculateTradingMetrics = (
+  trades,
+  initialCapital,
+  capitalAllocation = 1
+) => {
+  // Check if trades array is empty
+  if (trades.length === 0) {
+    return {
+      netProfit: 0,
+      annualizedReturn: 0,
+      sharpeRatio: 0,
+      maxDrawdownPct: 0,
+      // ... add other metrics with default values
+    };
+  }
+
+  // Adjust initial capital based on allocation
+  initialCapital = initialCapital * capitalAllocation;
+
   // Initialize metrics
   let totalNetProfit = 0;
   let grossProfit = 0;
@@ -134,7 +176,8 @@ export const calculateTradingMetrics = (trades, initialCapital) => {
 
   const firstTrade = trades[0];
   const lastTrade = trades[trades.length - 1];
-  const tradingPeriod = lastTrade.exitDate.toDate() - firstTrade.exitDate.toDate();
+  const tradingPeriod =
+    lastTrade.exitDate.toDate() - firstTrade.exitDate.toDate();
   const totalTradingDays = Math.ceil(tradingPeriod / (1000 * 60 * 60 * 24));
   const totalTradingYears = totalTradingDays / 365;
 
@@ -206,7 +249,7 @@ export const calculateTradingMetrics = (trades, initialCapital) => {
     if (tradeMonth !== currentMonth || tradeYear !== currentYear) {
       monthlyReturns.push({
         date: new Date(currentYear, currentMonth),
-        return: currentMonthProfit / currentMonthStartBalance
+        return: currentMonthProfit / currentMonthStartBalance,
       });
       currentMonthProfit = trade.netProfit;
       currentMonthStartBalance = balance - trade.netProfit;
@@ -214,7 +257,7 @@ export const calculateTradingMetrics = (trades, initialCapital) => {
       if (tradeYear !== currentYear) {
         yearlyReturns.push({
           year: currentYear,
-          return: currentYearProfit / currentYearStartBalance
+          return: currentYearProfit / currentYearStartBalance,
         });
         currentYearProfit = trade.netProfit;
         currentYearStartBalance = balance - trade.netProfit;
@@ -231,11 +274,11 @@ export const calculateTradingMetrics = (trades, initialCapital) => {
   // Add the last month's and year's return
   monthlyReturns.push({
     date: new Date(currentYear, currentMonth),
-    return: currentMonthProfit / currentMonthStartBalance
+    return: currentMonthProfit / currentMonthStartBalance,
   });
   yearlyReturns.push({
     year: currentYear,
-    return: currentYearProfit / currentYearStartBalance
+    return: currentYearProfit / currentYearStartBalance,
   });
 
   const totalTrades = trades.length;
@@ -245,25 +288,42 @@ export const calculateTradingMetrics = (trades, initialCapital) => {
   const medianTradeNetProfit = calculateMedian(allTradeNetProfits);
   const avgWinningTrade = grossProfit / winningTrades;
   const avgLosingTrade = grossLoss / losingTrades;
-  const medianWinningTrade = calculateMedian(allTradeNetProfits.filter(profit => profit > 0));
-  const medianLosingTrade = calculateMedian(allTradeNetProfits.filter(profit => profit < 0));
+  const medianWinningTrade = calculateMedian(
+    allTradeNetProfits.filter((profit) => profit > 0)
+  );
+  const medianLosingTrade = calculateMedian(
+    allTradeNetProfits.filter((profit) => profit < 0)
+  );
   const ratioAvgWinAvgLoss = Math.abs(avgWinningTrade / avgLosingTrade);
 
-  const cagr = (Math.pow((balance / initialCapital), (1 / totalTradingYears)) - 1) * 100;
+  const cagr =
+    (Math.pow(balance / initialCapital, 1 / totalTradingYears) - 1) * 100;
   const returnOnInitialCapital = (totalNetProfit / initialCapital) * 100;
 
+  // Calculate return to drawdown ratio
+  const maxDrawdownPercentage = (maxDrawdown / peakBalance) * 100;
+  const returnToDrawdownRatio = cagr / maxDrawdownPercentage;
+
   // Calculate average monthly return and standard deviation
-  const avgMonthlyReturn = monthlyReturns.reduce((sum, month) => sum + month.return, 0) / monthlyReturns.length;
-  const stdDevMonthly = calculateStandardDeviation(monthlyReturns.map(month => month.return));
+  const avgMonthlyReturn =
+    monthlyReturns.length > 0
+      ? monthlyReturns.reduce((sum, month) => sum + month.return, 0) /
+        monthlyReturns.length
+      : 0;
+  const stdDevMonthly = calculateStandardDeviation(
+    monthlyReturns.map((month) => month.return)
+  );
   const stdDevAnnualized = stdDevMonthly * Math.sqrt(12);
 
   // Calculate downside deviation
-  const downsideReturns = monthlyReturns.filter(month => month.return < 0);
-  const downsideDeviation = calculateStandardDeviation(downsideReturns.map(month => month.return));
+  const downsideReturns = monthlyReturns.filter((month) => month.return < 0);
+  const downsideDeviation = calculateStandardDeviation(
+    downsideReturns.map((month) => month.return)
+  );
 
   // Calculate best and worst years
-  const bestYear = Math.max(...yearlyReturns.map(year => year.return)) * 100;
-  const worstYear = Math.min(...yearlyReturns.map(year => year.return)) * 100;
+  const bestYear = Math.max(...yearlyReturns.map((year) => year.return)) * 100;
+  const worstYear = Math.min(...yearlyReturns.map((year) => year.return)) * 100;
 
   // Calculate Sharpe Ratio and Sortino Ratio
   const riskFreeRate = 0.02; // Assuming 2% risk-free rate
@@ -272,8 +332,12 @@ export const calculateTradingMetrics = (trades, initialCapital) => {
   const sortinoRatio = excessReturn / (downsideDeviation * Math.sqrt(12));
 
   // Calculate skewness and kurtosis
-  const skewness = calculateSkewness(monthlyReturns.map(month => month.return));
-  const kurtosis = calculateKurtosis(monthlyReturns.map(month => month.return));
+  const skewness = calculateSkewness(
+    monthlyReturns.map((month) => month.return)
+  );
+  const kurtosis = calculateKurtosis(
+    monthlyReturns.map((month) => month.return)
+  );
 
   // Calculate Value at Risk (VaR) and Conditional VaR (CVaR)
   // const historicalVaR = calculateHistoricalVaR(monthlyReturns.map(month => month.return), 0.05);
@@ -281,7 +345,9 @@ export const calculateTradingMetrics = (trades, initialCapital) => {
   // const cVaR = calculateConditionalVaR(monthlyReturns.map(month => month.return), 0.05);
 
   // Calculate positive periods
-  const positivePeriods = monthlyReturns.filter(month => month.return > 0).length;
+  const positivePeriods = monthlyReturns.filter(
+    (month) => month.return > 0
+  ).length;
   const positivePeriodsPct = (positivePeriods / monthlyReturns.length) * 100;
 
   // Calculate gain/loss ratio
@@ -292,6 +358,7 @@ export const calculateTradingMetrics = (trades, initialCapital) => {
     endBalance: balance,
     netProfit: totalNetProfit,
     annualizedReturn: cagr,
+    returnToDrawdownRatio: returnToDrawdownRatio,
     standardDeviation: stdDevAnnualized,
     bestYear,
     worstYear,
@@ -324,9 +391,116 @@ export const calculateTradingMetrics = (trades, initialCapital) => {
     // historicalVaR,
     // analyticalVaR,
     // cVaR,
-    positivePeriods: `${positivePeriods} out of ${monthlyReturns.length} months (${positivePeriodsPct.toFixed(2)}%)`,
+    positivePeriods: `${positivePeriods} out of ${
+      monthlyReturns.length
+    } months (${positivePeriodsPct.toFixed(2)}%)`,
     gainLossRatio,
   };
+};
+
+// New function to combine trades from multiple strategies
+export const combineStrategyTrades = (strategies, allocations) => {
+  let combinedTrades = [];
+
+  strategies.forEach((strategy, index) => {
+    const allocation = allocations[index];
+    const adjustedTrades = strategy.trades.map((trade) => ({
+      ...trade,
+      size: trade.size * allocation,
+      netProfit: trade.netProfit * allocation,
+    }));
+    combinedTrades = combinedTrades.concat(adjustedTrades);
+  });
+
+  // Sort combined trades by exit date
+  return combinedTrades.sort(
+    (a, b) => a.exitDate.toDate() - b.exitDate.toDate()
+  );
+};
+
+// New function to calculate portfolio metrics
+export const calculatePortfolioMetrics = (
+  strategies,
+  allocations,
+  totalCapital
+) => {
+  // Check if there are any strategies
+  if (strategies.length === 0) {
+    return {
+      netProfit: 0,
+      annualizedReturn: 0,
+      sharpeRatio: 0,
+      maxDrawdownPct: 0,
+      strategyAllocations: [],
+      strategyReturns: [],
+      correlationMatrix: [],
+    };
+  }
+
+  const combinedTrades = combineStrategyTrades(strategies, allocations);
+
+  // Calculate total allocation (should sum to 1)
+  const totalAllocation = allocations.reduce(
+    (sum, allocation) => sum + allocation,
+    0
+  );
+
+  // Calculate portfolio metrics
+  const portfolioMetrics = calculateTradingMetrics(
+    combinedTrades,
+    totalCapital,
+    totalAllocation
+  );
+
+  // Calculate additional portfolio-specific metrics
+  const strategyReturns = strategies.map(
+    (strategy) =>
+      calculateTradingMetrics(strategy.trades, strategy.initialCapital)
+        .annualizedReturn
+  );
+
+  // Calculate correlation matrix
+  const correlationMatrix = calculateCorrelationMatrix(strategies);
+
+  return {
+    ...portfolioMetrics,
+    strategyAllocations: allocations,
+    strategyReturns,
+    correlationMatrix,
+  };
+};
+
+// Helper function to calculate correlation matrix
+const calculateCorrelationMatrix = (strategies) => {
+  const returns = strategies.map((strategy) =>
+    strategy.trades.map((trade) => trade.netProfit / trade.size)
+  );
+
+  const correlationMatrix = [];
+  for (let i = 0; i < strategies.length; i++) {
+    correlationMatrix[i] = [];
+    for (let j = 0; j < strategies.length; j++) {
+      correlationMatrix[i][j] = calculateCorrelation(returns[i], returns[j]);
+    }
+  }
+
+  return correlationMatrix;
+};
+
+// Helper function to calculate correlation between two arrays
+const calculateCorrelation = (array1, array2) => {
+  const mean1 = mean(array1);
+  const mean2 = mean(array2);
+  const std1 = std(array1);
+  const std2 = std(array2);
+
+  const length = Math.min(array1.length, array2.length);
+  let sum = 0;
+  for (let i = 0; i < length; i++) {
+    sum += (array1[i] - mean1) * (array2[i] - mean2);
+  }
+
+  return sum / (length * std1 * std2);
 };
 
 // Helper functions (implement these separately)
@@ -339,25 +513,35 @@ function calculateMedian(arr) {
   return sorted[middle];
 }
 
+// Helper functions
 function calculateStandardDeviation(arr) {
+  if (arr.length === 0) return 0;
   const n = arr.length;
-  const mean = arr.reduce((a, b) => a + b) / n;
-  return Math.sqrt(arr.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / n);
+  const mean = arr.reduce((a, b) => a + b, 0) / n;
+  return Math.sqrt(
+    arr.map((x) => Math.pow(x - mean, 2)).reduce((a, b) => a + b, 0) / n
+  );
 }
 
 function calculateSkewness(arr) {
+  if (arr.length === 0) return 0;
   const n = arr.length;
-  const mean = arr.reduce((a, b) => a + b) / n;
-  const m3 = arr.map(x => Math.pow(x - mean, 3)).reduce((a, b) => a + b) / n;
-  const m2 = arr.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / n;
-  return m3 / Math.pow(m2, 3/2);
+  const mean = arr.reduce((a, b) => a + b, 0) / n;
+  const m3 =
+    arr.map((x) => Math.pow(x - mean, 3)).reduce((a, b) => a + b, 0) / n;
+  const m2 =
+    arr.map((x) => Math.pow(x - mean, 2)).reduce((a, b) => a + b, 0) / n;
+  return m3 / Math.pow(m2, 3 / 2);
 }
 
 function calculateKurtosis(arr) {
+  if (arr.length === 0) return 0;
   const n = arr.length;
-  const mean = arr.reduce((a, b) => a + b) / n;
-  const m4 = arr.map(x => Math.pow(x - mean, 4)).reduce((a, b) => a + b) / n;
-  const m2 = arr.map(x => Math.pow(x - mean, 2)).reduce((a, b) => a + b) / n;
+  const mean = arr.reduce((a, b) => a + b, 0) / n;
+  const m4 =
+    arr.map((x) => Math.pow(x - mean, 4)).reduce((a, b) => a + b, 0) / n;
+  const m2 =
+    arr.map((x) => Math.pow(x - mean, 2)).reduce((a, b) => a + b, 0) / n;
   return m4 / Math.pow(m2, 2) - 3;
 }
 
@@ -378,4 +562,3 @@ function calculateConditionalVaR(returns, confidence) {
   const cVaRValues = sorted.slice(0, index);
   return -cVaRValues.reduce((a, b) => a + b) / cVaRValues.length;
 }
-
