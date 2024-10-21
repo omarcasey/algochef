@@ -195,7 +195,7 @@ const UserStrategies = () => {
   };
 
   const filteredStrategies = strategies.filter((strategy) =>
-    strategy.name.toLowerCase().includes(filter.toLowerCase())
+    strategy?.name?.toLowerCase().includes(filter.toLowerCase())
   );
 
   const sortedStrategies = [...filteredStrategies].sort((a, b) => {

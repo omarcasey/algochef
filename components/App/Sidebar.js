@@ -35,6 +35,7 @@ import { useTheme } from "next-themes";
 import { FaPaintBrush } from "react-icons/fa";
 import { FaCheckCircle } from "react-icons/fa";
 import { Computer, Moon, Sun } from "lucide-react";
+import { IoIosConstruct } from "react-icons/io";
 
 const Sidebar = () => {
   const [isExpanded, setIsExpanded] = useState(() => {
@@ -124,9 +125,19 @@ const Sidebar = () => {
           <Button
             variant={"ghost"}
             className="w-full flex items-center justify-start"
-            onClick={() => router.push("/app/builder")}
+            onClick={() => router.push("/app/portfolios")}
           >
             <FiPieChart className={`mr-2 h-4 w-4 shrink-0`} />
+            <p className={`${isExpanded ? "" : "hidden"} font-normal`}>
+              Portfolios
+            </p>
+          </Button>
+          <Button
+            variant={"ghost"}
+            className="w-full flex items-center justify-start"
+            onClick={() => router.push("/app/builder")}
+          >
+            <IoIosConstruct className={`mr-2 h-4 w-4 shrink-0`} />
             <p className={`${isExpanded ? "" : "hidden"} font-normal`}>
               Portfolio Builder
             </p>

@@ -2,7 +2,8 @@
 import React, { useState, useEffect } from "react";
 import { useUser } from "reactfire";
 import { useFirestore, useFirestoreCollectionData } from "reactfire";
-import { query, collection, where, orderBy, getDocs } from "firebase/firestore";
+import { query, collection, where, orderBy, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
+import { useRouter } from 'next/navigation';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -21,7 +22,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Progress } from "@/components/ui/progress"; // Import the Progress component
+import { Progress } from "@/components/ui/progress";
 import { Loader2 } from "lucide-react";
 import { LoadingSpinner } from "@/components/ui/spinner";
 import {
@@ -48,6 +49,7 @@ const PortfolioBuilder = () => {
   const [generatedPortfolios, setGeneratedPortfolios] = useState([]);
   const [totalCapital, setTotalCapital] = useState(100000);
   const [computationProgress, setComputationProgress] = useState(0);
+  const [savedPortfolios, setSavedPortfolios] = useState([]);
 
   // Query to fetch user's strategies
   const strategiesQuery = query(
@@ -123,6 +125,52 @@ const PortfolioBuilder = () => {
     return result;
   };
 
+  // New function to save a generated portfolio
+  const savePortfolio = async (portfolio) => {
+    try {
+      const portfolioData = {
+        ...portfolio,
+        userId: user.uid,
+        type: "portfolio",
+        createdAt: serverTimestamp(),
+      };
+      const docRef = await addDoc(
+        collection(firestore, "strategies"),
+        portfolioData
+      );
+
+      // Save combined trades for the portfolio
+      const combinedTrades = await generateCombinedTrades(portfolio.strategies);
+      const tradesCollectionRef = collection(
+        firestore,
+        `strategies/${docRef.id}/trades`
+      );
+      await Promise.all(
+        combinedTrades.map((trade) => addDoc(tradesCollectionRef, trade))
+      );
+
+      setSavedPortfolios((prev) => [
+        ...prev,
+        { id: docRef.id, ...portfolioData },
+      ]);
+    } catch (error) {
+      console.error("Error saving portfolio:", error);
+    }
+  };
+
+  // Function to generate combined trades for a portfolio
+  const generateCombinedTrades = async (strategyIds) => {
+    const allTrades = await Promise.all(
+      strategyIds.map(fetchTradesForStrategy)
+    );
+    const combinedTrades = combineStrategyTrades(
+      allTrades,
+      strategyIds.map(() => 1 / strategyIds.length),
+      totalCapital
+    );
+    return combinedTrades;
+  };
+
   // Updated computation function
   const startComputation = async () => {
     setIsComputing(true);
@@ -185,6 +233,11 @@ const PortfolioBuilder = () => {
       // Take top 10 portfolios
       const topPortfolios = portfolios.slice(0, 10);
 
+      // After computation, save portfolios
+      for (const portfolio of topPortfolios) {
+        await savePortfolio(portfolio);
+      }
+
       setGeneratedPortfolios(topPortfolios);
     } catch (error) {
       console.error("Error in portfolio computation:", error);
@@ -194,6 +247,31 @@ const PortfolioBuilder = () => {
       setComputationProgress(100);
     }
   };
+
+  // Function to view a specific portfolio
+  const viewPortfolio = (portfolioId) => {
+    router.push(`/strategy/${portfolioId}`);
+  };
+
+  // Fetch saved portfolios on component mount
+  useEffect(() => {
+    const fetchSavedPortfolios = async () => {
+      if (user) {
+        const portfoliosQuery = query(
+          collection(firestore, "strategies"),
+          where("userId", "==", user.uid),
+          where("type", "==", "portfolio"),
+          orderBy("createdAt", "desc")
+        );
+        const portfoliosSnapshot = await getDocs(portfoliosQuery);
+        setSavedPortfolios(
+          portfoliosSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
+        );
+      }
+    };
+
+    fetchSavedPortfolios();
+  }, [user, firestore]);
 
   if (status === "loading" || strategiesStatus === "loading") {
     return (
@@ -326,11 +404,10 @@ const PortfolioBuilder = () => {
       </div>
 
       {/* Results */}
-      {generatedPortfolios.length > 0 && (
+      {/* Results */}
+      {savedPortfolios.length > 0 && (
         <div className="w-full">
-          <h2 className="text-xl font-semibold mb-2">
-            Top Generated Portfolios
-          </h2>
+          <h2 className="text-xl font-semibold mb-2">Saved Portfolios</h2>
           <Table>
             <TableHeader>
               <TableRow>
@@ -340,10 +417,11 @@ const PortfolioBuilder = () => {
                 <TableHead>Annualized Return</TableHead>
                 <TableHead>Sharpe Ratio</TableHead>
                 <TableHead>Max Drawdown %</TableHead>
+                <TableHead>Action</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-              {generatedPortfolios.map((portfolio) => (
+              {savedPortfolios.map((portfolio) => (
                 <TableRow key={portfolio.id}>
                   <TableCell>{portfolio.id}</TableCell>
                   <TableCell>
@@ -370,6 +448,11 @@ const PortfolioBuilder = () => {
                   </TableCell>
                   <TableCell>{portfolio.sharpeRatio.toFixed(2)}</TableCell>
                   <TableCell>{portfolio.maxDrawdownPct.toFixed(2)}%</TableCell>
+                  <TableCell>
+                    <Button onClick={() => viewPortfolio(portfolio.id)}>
+                      View
+                    </Button>
+                  </TableCell>
                 </TableRow>
               ))}
             </TableBody>
