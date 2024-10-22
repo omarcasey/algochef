@@ -2,8 +2,17 @@
 import React, { useState, useEffect } from "react";
 import { useUser } from "reactfire";
 import { useFirestore, useFirestoreCollectionData } from "reactfire";
-import { query, collection, where, orderBy, getDocs, addDoc, serverTimestamp } from "firebase/firestore";
-import { useRouter } from 'next/navigation';
+import {
+  query,
+  collection,
+  where,
+  orderBy,
+  getDocs,
+  addDoc,
+  serverTimestamp,
+  deleteDoc,
+} from "firebase/firestore";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -39,6 +48,7 @@ import {
 
 const PortfolioBuilder = () => {
   const { data: user, status } = useUser();
+  const router = useRouter();
   const firestore = useFirestore();
 
   const [selectedStrategies, setSelectedStrategies] = useState([]);
@@ -70,6 +80,36 @@ const PortfolioBuilder = () => {
     );
     const tradesSnapshot = await getDocs(tradesQuery);
     return tradesSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+  };
+
+  const clearTemporaryPortfolios = async () => {
+    try {
+      const tempPortfoliosQuery = query(
+        collection(firestore, "portfolios"),
+        where("userId", "==", user.uid),
+        where("temporary", "==", true)
+      );
+      const snapshots = await getDocs(tempPortfoliosQuery);
+  
+      // For each portfolio document
+      await Promise.all(snapshots.docs.map(async (portfolioDoc) => {
+        // First delete all trades in the subcollection
+        const tradesQuery = query(
+          collection(firestore, `portfolios/${portfolioDoc.id}/trades`)
+        );
+        const tradesSnapshot = await getDocs(tradesQuery);
+        await Promise.all(
+          tradesSnapshot.docs.map(tradeDoc => 
+            deleteDoc(tradeDoc.ref)
+          )
+        );
+  
+        // Then delete the portfolio document itself
+        await deleteDoc(portfolioDoc.ref);
+      }));
+    } catch (error) {
+      console.error("Error clearing temporary portfolios:", error);
+    }
   };
 
   // Function to toggle strategy selection
@@ -125,50 +165,78 @@ const PortfolioBuilder = () => {
     return result;
   };
 
-  // New function to save a generated portfolio
-  const savePortfolio = async (portfolio) => {
+  // First, update the generateCombinedTrades function to fetch trades first
+  const generateCombinedTrades = async (strategyIds) => {
+    // Fetch all trades for each strategy
+    const allTradesByStrategy = await Promise.all(
+      strategyIds.map(async (strategyId) => {
+        const tradesQuery = query(
+          collection(firestore, `strategies/${strategyId}/trades`),
+          orderBy("exitDate", "asc")
+        );
+        const tradesSnapshot = await getDocs(tradesQuery);
+        return tradesSnapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+      })
+    );
+
+    // Calculate equal allocations
+    const equalAllocation = 1 / strategyIds.length;
+    const allocations = new Array(strategyIds.length).fill(equalAllocation);
+
+    // Combine trades with allocations
+    let combinedTrades = [];
+    allTradesByStrategy.forEach((strategyTrades, index) => {
+      const allocation = allocations[index];
+      const adjustedTrades = strategyTrades.map((trade) => ({
+        ...trade,
+        size: trade.size * allocation,
+        netProfit: trade.netProfit * allocation,
+      }));
+      combinedTrades = combinedTrades.concat(adjustedTrades);
+    });
+
+    // Sort combined trades by exit date
+    return combinedTrades.sort(
+      (a, b) => a.exitDate.toMillis() - b.exitDate.toMillis()
+    );
+  };
+
+  // Then update how it's used in savePortfolio
+  const savePortfolio = async (portfolio, isPermanent = false) => {
     try {
+      // First save the portfolio document
       const portfolioData = {
         ...portfolio,
         userId: user.uid,
-        type: "portfolio",
+        temporary: !isPermanent,
         createdAt: serverTimestamp(),
       };
+
       const docRef = await addDoc(
-        collection(firestore, "strategies"),
+        collection(firestore, "portfolios"),
         portfolioData
       );
 
-      // Save combined trades for the portfolio
+      // Then generate and save the combined trades
       const combinedTrades = await generateCombinedTrades(portfolio.strategies);
+
+      // Save trades as a subcollection of the portfolio
       const tradesCollectionRef = collection(
         firestore,
-        `strategies/${docRef.id}/trades`
+        `portfolios/${docRef.id}/trades`
       );
       await Promise.all(
         combinedTrades.map((trade) => addDoc(tradesCollectionRef, trade))
       );
 
-      setSavedPortfolios((prev) => [
-        ...prev,
-        { id: docRef.id, ...portfolioData },
-      ]);
+      return docRef.id;
     } catch (error) {
       console.error("Error saving portfolio:", error);
+      return null;
     }
-  };
-
-  // Function to generate combined trades for a portfolio
-  const generateCombinedTrades = async (strategyIds) => {
-    const allTrades = await Promise.all(
-      strategyIds.map(fetchTradesForStrategy)
-    );
-    const combinedTrades = combineStrategyTrades(
-      allTrades,
-      strategyIds.map(() => 1 / strategyIds.length),
-      totalCapital
-    );
-    return combinedTrades;
   };
 
   // Updated computation function
@@ -177,6 +245,8 @@ const PortfolioBuilder = () => {
     setComputationProgress(0);
 
     try {
+      await clearTemporaryPortfolios();
+
       // Generate all possible combinations
       const combinations = generateCombinations(
         selectedStrategies,
@@ -250,7 +320,7 @@ const PortfolioBuilder = () => {
 
   // Function to view a specific portfolio
   const viewPortfolio = (portfolioId) => {
-    router.push(`/strategy/${portfolioId}`);
+    router.push(`/app/portfolios/${portfolioId}`); // Updated path
   };
 
   // Fetch saved portfolios on component mount
@@ -404,6 +474,75 @@ const PortfolioBuilder = () => {
       </div>
 
       {/* Results */}
+      {generatedPortfolios.length > 0 && (
+        <div className="w-full">
+          <h2 className="text-xl font-semibold mb-2">Scan Results</h2>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Name</TableHead>
+                <TableHead>Strategies</TableHead>
+                <TableHead>Net Profit</TableHead>
+                <TableHead>Annualized Return</TableHead>
+                <TableHead>Sharpe Ratio</TableHead>
+                <TableHead>Max Drawdown %</TableHead>
+                <TableHead>Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {generatedPortfolios.map((portfolio) => (
+                <TableRow key={portfolio.id}>
+                  <TableCell>
+                    {portfolio.name || `Portfolio ${portfolio.id}`}
+                  </TableCell>
+                  <TableCell>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <span className="cursor-help underline dotted">
+                            {portfolio.strategies.length} strategies
+                          </span>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <ul>
+                            {portfolio.strategyNames.map((name, index) => (
+                              <li key={index}>{name}</li>
+                            ))}
+                          </ul>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </TableCell>
+                  <TableCell>${portfolio.netProfit.toLocaleString()}</TableCell>
+                  <TableCell>
+                    {portfolio.annualizedReturn.toFixed(2)}%
+                  </TableCell>
+                  <TableCell>{portfolio.sharpeRatio.toFixed(2)}</TableCell>
+                  <TableCell>{portfolio.maxDrawdownPct.toFixed(2)}%</TableCell>
+                  <TableCell>
+                    <div className="flex space-x-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => savePortfolio(portfolio, true)}
+                      >
+                        Save Permanently
+                      </Button>
+                      <Button
+                        size="sm"
+                        onClick={() => viewPortfolio(portfolio.id)}
+                      >
+                        View
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      )}
+
       {/* Results */}
       {savedPortfolios.length > 0 && (
         <div className="w-full">

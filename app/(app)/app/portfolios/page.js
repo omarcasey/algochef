@@ -101,6 +101,7 @@ const Portfolios = () => {
   const portfoliosQuery = query(
     collection(firestore, "portfolios"),
     where("userId", "==", user ? user.uid : ""),
+    where("temporary", "==", false),
     orderBy("createdAt", "desc")
   );
 
