@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useUser } from "reactfire";
 import { useFirestore, useFirestoreCollectionData } from "reactfire";
 import {
@@ -10,7 +10,7 @@ import {
   getDocs,
   addDoc,
   serverTimestamp,
-  deleteDoc,
+  doc,
 } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -34,17 +34,153 @@ import {
 import { Progress } from "@/components/ui/progress";
 import { Loader2 } from "lucide-react";
 import { LoadingSpinner } from "@/components/ui/spinner";
-import {
-  combineStrategyTrades,
-  calculateTradingMetrics,
-  calculatePortfolioMetrics,
-} from "@/components/processing/dataProcessing";
+import { calculateTradingMetrics } from "@/components/processing/dataProcessing";
 import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from "@/components/ui/tooltip";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+
+// Mini Equity Curve Component
+const MiniEquityCurve = React.memo(({ trades, width = 120, height = 40 }) => {
+  const canvasRef = useRef(null);
+
+  useEffect(() => {
+    if (!trades.length) return;
+
+    const canvas = canvasRef.current;
+    const ctx = canvas.getContext("2d");
+
+    // Calculate equity curve data
+    const equityData = trades.reduce((acc, trade) => {
+      const lastEquity = acc.length > 0 ? acc[acc.length - 1].equity : 0;
+      return [...acc, { equity: lastEquity + trade.netProfit }];
+    }, []);
+
+    // Normalize data
+    const minEquity = Math.min(...equityData.map((d) => d.equity));
+    const maxEquity = Math.max(...equityData.map((d) => d.equity));
+    const range = maxEquity - minEquity || 1;
+
+    // Clear canvas
+    ctx.clearRect(0, 0, width, height);
+
+    // Draw line
+    ctx.beginPath();
+    ctx.strokeStyle =
+      equityData[equityData.length - 1]?.equity > 0 ? "#22c55e" : "#ef4444";
+    ctx.lineWidth = 1.5;
+
+    equityData.forEach((point, i) => {
+      const x = (i / (equityData.length - 1)) * width;
+      const y = height - ((point.equity - minEquity) / range) * height;
+
+      if (i === 0) {
+        ctx.moveTo(x, y);
+      } else {
+        ctx.lineTo(x, y);
+      }
+    });
+
+    ctx.stroke();
+  }, [trades, width, height]);
+
+  return (
+    <canvas
+      ref={canvasRef}
+      width={width}
+      height={height}
+      className="w-[120px] h-[40px]"
+    />
+  );
+});
+
+const StrategySelectionModal = ({
+  strategies,
+  selectedStrategies,
+  onSelectionChange,
+}) => {
+  return (
+    <Dialog>
+      <DialogTrigger asChild>
+        <Button variant="outline" className="w-full">
+          Select Strategies ({selectedStrategies.length} selected)
+        </Button>
+      </DialogTrigger>
+      <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+        <DialogHeader>
+          <DialogTitle>Select Strategies</DialogTitle>
+        </DialogHeader>
+        <div className="mt-4">
+          <div className="flex justify-end mb-4 space-x-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onSelectionChange([])}
+            >
+              Deselect All
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => onSelectionChange(strategies.map((s) => s.id))}
+            >
+              Select All
+            </Button>
+          </div>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Select</TableHead>
+                <TableHead>Strategy Name</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Created At</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {strategies.map((strategy) => (
+                <TableRow key={strategy.id}>
+                  <TableCell>
+                    <Checkbox
+                      checked={selectedStrategies.includes(strategy.id)}
+                      onCheckedChange={() => {
+                        const newSelection = selectedStrategies.includes(
+                          strategy.id
+                        )
+                          ? selectedStrategies.filter(
+                              (id) => id !== strategy.id
+                            )
+                          : [...selectedStrategies, strategy.id];
+                        onSelectionChange(newSelection);
+                      }}
+                    />
+                  </TableCell>
+                  <TableCell>{strategy.name}</TableCell>
+                  <TableCell>
+                    <div className="bg-purple-200 dark:bg-purple-950 text-purple-800 dark:text-purple-400 font-medium px-2 py-1.5 rounded-md text-xs w-16 flex items-center justify-center">
+                      Future
+                    </div>
+                  </TableCell>
+                  <TableCell>
+                    {strategy.createdAt?.toDate().toLocaleDateString()}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+};
 
 const PortfolioBuilder = () => {
   const { data: user, status } = useUser();
@@ -52,14 +188,16 @@ const PortfolioBuilder = () => {
   const firestore = useFirestore();
 
   const [selectedStrategies, setSelectedStrategies] = useState([]);
-  const [minStrategies, setMinStrategies] = useState(5);
-  const [maxStrategies, setMaxStrategies] = useState(7);
+  const [minStrategies, setMinStrategies] = useState(3);
+  const [maxStrategies, setMaxStrategies] = useState(3);
   const [rankingFunction, setRankingFunction] = useState("netProfit");
   const [isComputing, setIsComputing] = useState(false);
-  const [generatedPortfolios, setGeneratedPortfolios] = useState([]);
   const [totalCapital, setTotalCapital] = useState(100000);
   const [computationProgress, setComputationProgress] = useState(0);
-  const [savedPortfolios, setSavedPortfolios] = useState([]);
+  const [maxStoredPortfolios, setMaxStoredPortfolios] = useState(50);
+  const [rankedPortfolios, setRankedPortfolios] = useState([]);
+  const [processedCount, setProcessedCount] = useState(0);
+  const [totalCombinations, setTotalCombinations] = useState(0);
 
   // Query to fetch user's strategies
   const strategiesQuery = query(
@@ -72,52 +210,56 @@ const PortfolioBuilder = () => {
   const { data: strategies, status: strategiesStatus } =
     useFirestoreCollectionData(strategiesQuery, { idField: "id" });
 
-  // Function to fetch trades for a strategy
-  const fetchTradesForStrategy = async (strategyId) => {
-    const tradesQuery = query(
-      collection(firestore, `strategies/${strategyId}/trades`),
-      orderBy("exitDate", "asc")
-    );
-    const tradesSnapshot = await getDocs(tradesQuery);
-    return tradesSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-  };
-
-  const clearTemporaryPortfolios = async () => {
-    try {
-      const tempPortfoliosQuery = query(
-        collection(firestore, "portfolios"),
-        where("userId", "==", user.uid),
-        where("temporary", "==", true)
-      );
-      const snapshots = await getDocs(tempPortfoliosQuery);
-  
-      // For each portfolio document
-      await Promise.all(snapshots.docs.map(async (portfolioDoc) => {
-        // First delete all trades in the subcollection
-        const tradesQuery = query(
-          collection(firestore, `portfolios/${portfolioDoc.id}/trades`)
-        );
-        const tradesSnapshot = await getDocs(tradesQuery);
-        await Promise.all(
-          tradesSnapshot.docs.map(tradeDoc => 
-            deleteDoc(tradeDoc.ref)
-          )
-        );
-  
-        // Then delete the portfolio document itself
-        await deleteDoc(portfolioDoc.ref);
-      }));
-    } catch (error) {
-      console.error("Error clearing temporary portfolios:", error);
+  // Initialize selected strategies when strategies are loaded
+  useEffect(() => {
+    if (strategies && strategies.length > 0) {
+      setSelectedStrategies(strategies.map((strategy) => strategy.id));
     }
+  }, [strategies]);
+
+  // Helper function to insert portfolio in sorted order
+  const insertPortfolioInRankedList = (
+    newPortfolio,
+    currentList,
+    rankingKey,
+    maxSize
+  ) => {
+    const updatedList = [...currentList];
+
+    const insertIndex = updatedList.findIndex(
+      (portfolio) => portfolio[rankingKey] < newPortfolio[rankingKey]
+    );
+
+    if (insertIndex === -1) {
+      if (updatedList.length >= maxSize) {
+        return updatedList;
+      }
+      updatedList.push(newPortfolio);
+    } else {
+      updatedList.splice(insertIndex, 0, newPortfolio);
+      if (updatedList.length > maxSize) {
+        updatedList.pop();
+      }
+    }
+
+    return updatedList;
   };
 
-  // Function to toggle strategy selection
-  const toggleStrategySelection = (strategyId) => {
-    setSelectedStrategies((prev) =>
-      prev.includes(strategyId)
-        ? prev.filter((id) => id !== strategyId)
-        : [...prev, strategyId]
+  const generateCombinedTrades = (selectedStrategiesData, allocations) => {
+    let combinedTrades = [];
+
+    selectedStrategiesData.forEach((strategy, index) => {
+      const allocation = allocations[index];
+      const adjustedTrades = strategy.trades.map((trade) => ({
+        ...trade,
+        size: trade.size * allocation,
+        netProfit: trade.netProfit * allocation,
+      }));
+      combinedTrades = combinedTrades.concat(adjustedTrades);
+    });
+
+    return combinedTrades.sort(
+      (a, b) => new Date(a.exitDate) - new Date(b.exitDate)
     );
   };
 
@@ -138,7 +280,7 @@ const PortfolioBuilder = () => {
     return factorial(n) / (factorial(r) * factorial(n - r));
   };
 
-  // Helper function for factorial calculation (iterative version)
+  // Helper function for factorial calculation
   const factorial = (num) => {
     let result = 1;
     for (let i = 2; i <= num; i++) {
@@ -165,53 +307,118 @@ const PortfolioBuilder = () => {
     return result;
   };
 
-  // First, update the generateCombinedTrades function to fetch trades first
-  const generateCombinedTrades = async (strategyIds) => {
-    // Fetch all trades for each strategy
-    const allTradesByStrategy = await Promise.all(
-      strategyIds.map(async (strategyId) => {
-        const tradesQuery = query(
-          collection(firestore, `strategies/${strategyId}/trades`),
-          orderBy("exitDate", "asc")
+  const startComputation = async () => {
+    setIsComputing(true);
+    setComputationProgress(0);
+    setProcessedCount(0);
+    setRankedPortfolios([]);
+
+    try {
+      const combinations = generateCombinations(
+        selectedStrategies,
+        minStrategies,
+        maxStrategies
+      );
+
+      setTotalCombinations(combinations.length);
+
+      // Fetch all trades for selected strategies at once
+      const strategiesWithTrades = await Promise.all(
+        selectedStrategies.map(async (strategyId) => {
+          const strategy = strategies.find((s) => s.id === strategyId);
+          const tradesQuery = query(
+            collection(firestore, `strategies/${strategyId}/trades`),
+            orderBy("exitDate", "asc")
+          );
+          const tradesSnapshot = await getDocs(tradesQuery);
+          const trades = tradesSnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }));
+          return { ...strategy, trades };
+        })
+      );
+
+      // Process combinations one by one
+      for (let i = 0; i < combinations.length; i++) {
+        const combination = combinations[i];
+
+        const selectedStrategiesData = strategiesWithTrades.filter((strategy) =>
+          combination.includes(strategy.id)
         );
-        const tradesSnapshot = await getDocs(tradesQuery);
-        return tradesSnapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
-      })
-    );
 
-    // Calculate equal allocations
-    const equalAllocation = 1 / strategyIds.length;
-    const allocations = new Array(strategyIds.length).fill(equalAllocation);
+        const equalAllocation = 1 / combination.length;
+        const allocations = new Array(combination.length).fill(equalAllocation);
 
-    // Combine trades with allocations
-    let combinedTrades = [];
-    allTradesByStrategy.forEach((strategyTrades, index) => {
-      const allocation = allocations[index];
-      const adjustedTrades = strategyTrades.map((trade) => ({
-        ...trade,
-        size: trade.size * allocation,
-        netProfit: trade.netProfit * allocation,
-      }));
-      combinedTrades = combinedTrades.concat(adjustedTrades);
-    });
+        const combinedTrades = generateCombinedTrades(
+          selectedStrategiesData,
+          allocations
+        );
 
-    // Sort combined trades by exit date
-    return combinedTrades.sort(
-      (a, b) => a.exitDate.toMillis() - b.exitDate.toMillis()
-    );
+        const portfolioMetrics = calculateTradingMetrics(
+          combinedTrades,
+          totalCapital
+        );
+
+        const portfolio = {
+          id: crypto.randomUUID(),
+          strategies: combination,
+          strategyNames: selectedStrategiesData.map((s) => s.name),
+          trades: combinedTrades,
+          ...portfolioMetrics,
+        };
+
+        setRankedPortfolios((currentRanked) =>
+          insertPortfolioInRankedList(
+            portfolio,
+            currentRanked,
+            rankingFunction,
+            maxStoredPortfolios
+          )
+        );
+
+        setProcessedCount(i + 1);
+        setComputationProgress(((i + 1) / combinations.length) * 100);
+
+        // Save to localStorage periodically
+        if ((i + 1) % 10 === 0 || i === combinations.length - 1) {
+          saveToLocalStorage();
+        }
+      }
+    } catch (error) {
+      console.error("Error in portfolio computation:", error);
+    } finally {
+      setIsComputing(false);
+      setComputationProgress(100);
+      saveToLocalStorage();
+    }
   };
 
-  // Then update how it's used in savePortfolio
-  const savePortfolio = async (portfolio, isPermanent = false) => {
+  const saveToLocalStorage = () => {
     try {
-      // First save the portfolio document
+      localStorage.setItem(
+        "portfolioResults",
+        JSON.stringify(rankedPortfolios)
+      );
+    } catch (error) {
+      console.error("Error saving to localStorage:", error);
+    }
+  };
+
+  // Modified save portfolio function
+  const savePortfolio = async (portfolio, isPermanent = false) => {
+    if (!isPermanent) {
+      const updatedResults = [...rankedPortfolios, portfolio];
+      setRankedPortfolios(updatedResults);
+      localStorage.setItem("portfolioResults", JSON.stringify(updatedResults));
+      return portfolio.id;
+    }
+
+    try {
       const portfolioData = {
         ...portfolio,
         userId: user.uid,
-        temporary: !isPermanent,
+        temporary: false,
         createdAt: serverTimestamp(),
       };
 
@@ -219,19 +426,6 @@ const PortfolioBuilder = () => {
         collection(firestore, "portfolios"),
         portfolioData
       );
-
-      // Then generate and save the combined trades
-      const combinedTrades = await generateCombinedTrades(portfolio.strategies);
-
-      // Save trades as a subcollection of the portfolio
-      const tradesCollectionRef = collection(
-        firestore,
-        `portfolios/${docRef.id}/trades`
-      );
-      await Promise.all(
-        combinedTrades.map((trade) => addDoc(tradesCollectionRef, trade))
-      );
-
       return docRef.id;
     } catch (error) {
       console.error("Error saving portfolio:", error);
@@ -239,109 +433,26 @@ const PortfolioBuilder = () => {
     }
   };
 
-  // Updated computation function
-  const startComputation = async () => {
-    setIsComputing(true);
-    setComputationProgress(0);
-
-    try {
-      await clearTemporaryPortfolios();
-
-      // Generate all possible combinations
-      const combinations = generateCombinations(
-        selectedStrategies,
-        minStrategies,
-        maxStrategies
-      );
-
-      // Fetch trades for all selected strategies
-      const strategiesWithTrades = await Promise.all(
-        selectedStrategies.map(async (strategyId) => {
-          const strategy = strategies.find((s) => s.id === strategyId);
-          const trades = await fetchTradesForStrategy(strategyId);
-          return { ...strategy, trades };
-        })
-      );
-
-      // Calculate performance for each combination
-      const portfolios = [];
-      for (let i = 0; i < combinations.length; i++) {
-        const combination = combinations[i];
-        const selectedStrategiesData = strategiesWithTrades.filter((strategy) =>
-          combination.includes(strategy.id)
-        );
-        const equalAllocation = 1 / combination.length;
-        const allocations = new Array(combination.length).fill(equalAllocation);
-
-        // Combine trades from all strategies in the combination
-        const combinedTrades = combineStrategyTrades(
-          selectedStrategiesData,
-          allocations,
-          totalCapital
-        );
-
-        // Calculate portfolio metrics based on combined trades
-        const portfolioMetrics = calculateTradingMetrics(
-          combinedTrades,
-          totalCapital
-        );
-
-        portfolios.push({
-          id: i + 1,
-          strategies: combination,
-          strategyNames: selectedStrategiesData.map((s) => s.name),
-          ...portfolioMetrics,
-        });
-
-        // Update progress
-        setComputationProgress(((i + 1) / combinations.length) * 100);
-      }
-
-      // Sort portfolios based on ranking function
-      portfolios.sort((a, b) => b[rankingFunction] - a[rankingFunction]);
-
-      // Take top 10 portfolios
-      const topPortfolios = portfolios.slice(0, 10);
-
-      // After computation, save portfolios
-      for (const portfolio of topPortfolios) {
-        await savePortfolio(portfolio);
-      }
-
-      setGeneratedPortfolios(topPortfolios);
-    } catch (error) {
-      console.error("Error in portfolio computation:", error);
-      // Handle error (e.g., show error message to user)
-    } finally {
-      setIsComputing(false);
-      setComputationProgress(100);
-    }
-  };
-
   // Function to view a specific portfolio
   const viewPortfolio = (portfolioId) => {
-    router.push(`/app/portfolios/${portfolioId}`); // Updated path
+    router.push(`/app/portfolios/${portfolioId}`);
   };
 
-  // Fetch saved portfolios on component mount
-  useEffect(() => {
-    const fetchSavedPortfolios = async () => {
-      if (user) {
-        const portfoliosQuery = query(
-          collection(firestore, "strategies"),
-          where("userId", "==", user.uid),
-          where("type", "==", "portfolio"),
-          orderBy("createdAt", "desc")
-        );
-        const portfoliosSnapshot = await getDocs(portfoliosQuery);
-        setSavedPortfolios(
-          portfoliosSnapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }))
-        );
-      }
-    };
+  const clearResults = () => {
+    setRankedPortfolios([]);
+    localStorage.removeItem("portfolioResults");
+    setComputationProgress(0);
+    setProcessedCount(0);
+  };
 
-    fetchSavedPortfolios();
-  }, [user, firestore]);
+  // Load saved results from localStorage on mount
+  useEffect(() => {
+    const savedResults = localStorage.getItem("portfolioResults");
+    if (savedResults) {
+      const parsed = JSON.parse(savedResults);
+      setRankedPortfolios(parsed);
+    }
+  }, []);
 
   if (status === "loading" || strategiesStatus === "loading") {
     return (
@@ -362,33 +473,11 @@ const PortfolioBuilder = () => {
         <h2 className="text-xl font-semibold mb-2">
           Step 1: Choose Strategies
         </h2>
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Select</TableHead>
-              <TableHead>Strategy Name</TableHead>
-              <TableHead>Type</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {strategies.map((strategy) => (
-              <TableRow key={strategy.id}>
-                <TableCell>
-                  <Checkbox
-                    checked={selectedStrategies.includes(strategy.id)}
-                    onCheckedChange={() => toggleStrategySelection(strategy.id)}
-                  />
-                </TableCell>
-                <TableCell>{strategy.name}</TableCell>
-                <TableCell>
-                  <div className="bg-purple-200 dark:bg-purple-950 text-purple-800 dark:text-purple-400 font-medium px-2 py-1.5 rounded-md text-xs w-16 flex items-center justify-center">
-                    Future
-                  </div>
-                </TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
+        <StrategySelectionModal
+          strategies={strategies || []}
+          selectedStrategies={selectedStrategies}
+          onSelectionChange={setSelectedStrategies}
+        />
         <p className="mt-2">Selected strategies: {selectedStrategies.length}</p>
         <p>Total combinations to test: {calculateCombinations()}</p>
       </div>
@@ -400,7 +489,9 @@ const PortfolioBuilder = () => {
         </h2>
         <div className="flex space-x-4 mb-4">
           <div>
-            <label>Min Strategies:</label>
+            <label className="block text-sm font-medium mb-1">
+              Min Strategies:
+            </label>
             <Input
               type="number"
               value={minStrategies}
@@ -410,7 +501,9 @@ const PortfolioBuilder = () => {
             />
           </div>
           <div>
-            <label>Max Strategies:</label>
+            <label className="block text-sm font-medium mb-1">
+              Max Strategies:
+            </label>
             <Input
               type="number"
               value={maxStrategies}
@@ -420,7 +513,9 @@ const PortfolioBuilder = () => {
             />
           </div>
           <div>
-            <label>Total Capital:</label>
+            <label className="block text-sm font-medium mb-1">
+              Total Capital:
+            </label>
             <Input
               type="number"
               value={totalCapital}
@@ -428,9 +523,27 @@ const PortfolioBuilder = () => {
               min={1}
             />
           </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Maximum Portfolios to Store:
+            </label>
+            <Input
+              type="number"
+              value={maxStoredPortfolios}
+              onChange={(e) => setMaxStoredPortfolios(Number(e.target.value))}
+              min={1}
+              max={1000}
+            />
+            <p className="text-sm text-gray-500 mt-1">
+              Only the top {maxStoredPortfolios} portfolios will be stored and
+              displayed
+            </p>
+          </div>
         </div>
         <div>
-          <label>Ranking Function:</label>
+          <label className="block text-sm font-medium mb-1">
+            Ranking Function:
+          </label>
           <Select value={rankingFunction} onValueChange={setRankingFunction}>
             <SelectTrigger className="w-[180px]">
               <SelectValue placeholder="Select ranking function" />
@@ -453,6 +566,7 @@ const PortfolioBuilder = () => {
         <Button
           onClick={startComputation}
           disabled={isComputing || selectedStrategies.length === 0}
+          className="w-full"
         >
           {isComputing ? (
             <>
@@ -460,28 +574,44 @@ const PortfolioBuilder = () => {
               Computing...
             </>
           ) : (
-            "Compute"
+            "Start Portfolio Generation"
           )}
         </Button>
         {isComputing && (
           <div className="mt-4">
             <Progress value={computationProgress} className="w-full" />
             <p className="text-sm text-center mt-2">
-              {Math.round(computationProgress)}% Complete
+              {processedCount} of {totalCombinations} combinations processed (
+              {Math.round(computationProgress)}%)
             </p>
           </div>
         )}
       </div>
 
       {/* Results */}
-      {generatedPortfolios.length > 0 && (
+      {(rankedPortfolios.length > 0 || isComputing) && (
         <div className="w-full">
-          <h2 className="text-xl font-semibold mb-2">Scan Results</h2>
+          <div className="flex justify-between items-center mb-4">
+            <h2 className="text-xl font-semibold">
+              Top Performing Portfolios{" "}
+              {isComputing
+                ? `(Processing ${processedCount} of ${totalCombinations})`
+                : ""}
+            </h2>
+            <Button
+              variant="destructive"
+              onClick={clearResults}
+              disabled={isComputing}
+            >
+              Clear Results
+            </Button>
+          </div>
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Name</TableHead>
                 <TableHead>Strategies</TableHead>
+                <TableHead>Equity Curve</TableHead>
                 <TableHead>Net Profit</TableHead>
                 <TableHead>Annualized Return</TableHead>
                 <TableHead>Sharpe Ratio</TableHead>
@@ -490,7 +620,7 @@ const PortfolioBuilder = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {generatedPortfolios.map((portfolio) => (
+              {rankedPortfolios.map((portfolio) => (
                 <TableRow key={portfolio.id}>
                   <TableCell>
                     {portfolio.name || `Portfolio ${portfolio.id}`}
@@ -513,6 +643,9 @@ const PortfolioBuilder = () => {
                       </Tooltip>
                     </TooltipProvider>
                   </TableCell>
+                  <TableCell>
+                    <MiniEquityCurve trades={portfolio.trades} />
+                  </TableCell>
                   <TableCell>${portfolio.netProfit.toLocaleString()}</TableCell>
                   <TableCell>
                     {portfolio.annualizedReturn.toFixed(2)}%
@@ -526,7 +659,7 @@ const PortfolioBuilder = () => {
                         size="sm"
                         onClick={() => savePortfolio(portfolio, true)}
                       >
-                        Save Permanently
+                        Save
                       </Button>
                       <Button
                         size="sm"
@@ -535,62 +668,6 @@ const PortfolioBuilder = () => {
                         View
                       </Button>
                     </div>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </div>
-      )}
-
-      {/* Results */}
-      {savedPortfolios.length > 0 && (
-        <div className="w-full">
-          <h2 className="text-xl font-semibold mb-2">Saved Portfolios</h2>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Portfolio ID</TableHead>
-                <TableHead>Strategies</TableHead>
-                <TableHead>Net Profit</TableHead>
-                <TableHead>Annualized Return</TableHead>
-                <TableHead>Sharpe Ratio</TableHead>
-                <TableHead>Max Drawdown %</TableHead>
-                <TableHead>Action</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {savedPortfolios.map((portfolio) => (
-                <TableRow key={portfolio.id}>
-                  <TableCell>{portfolio.id}</TableCell>
-                  <TableCell>
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <span className="cursor-help underline dotted">
-                            {portfolio.strategies.length} strategies
-                          </span>
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <ul>
-                            {portfolio.strategyNames.map((name, index) => (
-                              <li key={index}>{name}</li>
-                            ))}
-                          </ul>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </TableCell>
-                  <TableCell>${portfolio.netProfit.toLocaleString()}</TableCell>
-                  <TableCell>
-                    {portfolio.annualizedReturn.toFixed(2)}%
-                  </TableCell>
-                  <TableCell>{portfolio.sharpeRatio.toFixed(2)}</TableCell>
-                  <TableCell>{portfolio.maxDrawdownPct.toFixed(2)}%</TableCell>
-                  <TableCell>
-                    <Button onClick={() => viewPortfolio(portfolio.id)}>
-                      View
-                    </Button>
                   </TableCell>
                 </TableRow>
               ))}
