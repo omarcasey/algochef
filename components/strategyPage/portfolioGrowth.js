@@ -22,12 +22,13 @@ const PortfolioGrowth = ({ strategy, trades, plotByTrade = false }) => {
     let equity = strategy.metrics.initialCapital;
     const equityCurve = [];
 
-    trades.forEach((trade) => {
+    // Use array index instead of trade.order
+    trades.forEach((trade, index) => {
       equity += trade.netProfit;
       equityCurve.push({
         date: trade.exitDate.toDate().getTime(),
         equity: equity,
-        tradeNumber: trade.order + 1,
+        tradeNumber: index + 1, // Simply use the array index + 1
       });
     });
 
@@ -57,7 +58,6 @@ const PortfolioGrowth = ({ strategy, trades, plotByTrade = false }) => {
 
   const { theme } = useTheme();
 
-  // Date formatter to show Month and Year
   const dateFormatter = (date) => {
     const options = { year: "numeric", month: "short" };
     return new Intl.DateTimeFormat("en-US", options).format(new Date(date));
@@ -82,16 +82,14 @@ const PortfolioGrowth = ({ strategy, trades, plotByTrade = false }) => {
         interval: Math.floor(data.length / 12),
       };
 
-  // Function to generate reference lines every 5 years, starting from Jan 1st
-  // Memoized reference lines to avoid full re-render
   const referenceLines = useMemo(() => {
-    if (plotByTrade) return []; // Don't show reference lines in trade mode
+    if (plotByTrade) return [];
 
     const startDate = new Date(Math.min(...data.map((d) => d.date)));
     const endDate = new Date(Math.max(...data.map((d) => d.date)));
     const lines = [];
 
-    let currentDate = new Date(startDate.getFullYear(), 0, 1); // January 1st of the start year
+    let currentDate = new Date(startDate.getFullYear(), 0, 1);
     const yearsSince1970 = currentDate.getFullYear() - 1970;
     const yearsToAdd = 5 - (yearsSince1970 % 5);
     currentDate.setFullYear(currentDate.getFullYear() + yearsToAdd);

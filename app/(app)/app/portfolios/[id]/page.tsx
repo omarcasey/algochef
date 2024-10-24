@@ -44,7 +44,7 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { IoAnalyticsSharp } from "react-icons/io5";
 
-const StrategyPage = () => {
+const PortfolioPage = () => {
   const params = useParams<{ id: string }>();
   const { data: user, status } = useUser();
   const firestore = useFirestore();
@@ -76,7 +76,7 @@ const StrategyPage = () => {
     setDataInDollars(!checked);
   };
 
-  const strategyId = params?.id;
+  const portfolioId = params?.id;
 
   const sectionRefs = {
     summary: useRef<HTMLDivElement>(null),
@@ -89,25 +89,27 @@ const StrategyPage = () => {
     trades: useRef<HTMLDivElement>(null),
   };
 
-  if (!strategyId) {
-    return <div>Strategy ID is missing.</div>;
+  if (!portfolioId) {
+    return <div>Portfolio ID is missing.</div>;
   }
 
-  const strategyRef = doc(firestore, "strategies", strategyId);
-  const { data: strategy, status: strategyStatus } =
-    useFirestoreDocData(strategyRef);
+  // Changed from strategies to portfolios collection
+  const portfolioRef = doc(firestore, "portfolios", portfolioId);
+  const { data: portfolio, status: portfolioStatus } =
+    useFirestoreDocData(portfolioRef);
 
+  // Changed from strategies/{id}/trades to portfolios/{id}/trades
   const tradesCollectionRef = collection(
     firestore,
-    `strategies/${strategyId}/trades`
+    `portfolios/${portfolioId}/trades`
   );
-  const tradesQuery = query(tradesCollectionRef, orderBy("order"));
+  const tradesQuery = query(tradesCollectionRef, orderBy("exitDate", "asc"));
   const { data: tradesData, status: tradesStatus } =
     useFirestoreCollection(tradesQuery);
 
   if (
     status === "loading" ||
-    strategyStatus === "loading" ||
+    portfolioStatus === "loading" ||
     tradesStatus === "loading"
   ) {
     return (
@@ -118,10 +120,10 @@ const StrategyPage = () => {
   }
 
   if (!user) {
-    return <div>Please sign in to view strategies.</div>;
+    return <div>Please sign in to view portfolios.</div>;
   }
 
-  if (strategyStatus === "error" || tradesStatus === "error") {
+  if (portfolioStatus === "error" || tradesStatus === "error") {
     return <div>Error fetching data. Please try again later.</div>;
   }
 
@@ -139,7 +141,7 @@ const StrategyPage = () => {
     <>
       <div className="flex w-full">
         <div
-          className={` space-y-1 transition-width duration-300 ${
+          className={`space-y-1 transition-width duration-300 ${
             isExpanded ? "w-56 pr-10" : "w-[4.5rem] pr-6"
           }`}
         >
@@ -150,15 +152,15 @@ const StrategyPage = () => {
               className={`-mt-[3px] mb-9`}
             >
               <GoSidebarCollapse
-                className={` transition-transform ${
-                  isExpanded ? " rotate-180" : ""
+                className={`transition-transform ${
+                  isExpanded ? "rotate-180" : ""
                 }`}
               />
             </Button>
           </div>
           <p
             className={`ml-7 !mb-4 mt-5 text-gray-400 text-xs uppercase ${
-              isExpanded ? " " : "hidden"
+              isExpanded ? "" : "hidden"
             }`}
           >
             Portfolio Report
@@ -170,7 +172,7 @@ const StrategyPage = () => {
             onClick={() => scrollToSection("summary")}
           >
             <IoEyeOutline size={16} className={`mr-2 shrink-0`} />
-            <p className={`font-normal ${isExpanded ? " " : "hidden"}`}>
+            <p className={`font-normal ${isExpanded ? "" : "hidden"}`}>
               Summary
             </p>
           </Button>
@@ -181,7 +183,7 @@ const StrategyPage = () => {
             onClick={() => scrollToSection("activereturns")}
           >
             <IoStatsChartSharp className="mr-2 shrink-0" />
-            <p className={`font-normal ${isExpanded ? " " : "hidden"}`}>
+            <p className={`font-normal ${isExpanded ? "" : "hidden"}`}>
               Active Returns
             </p>
           </Button>
@@ -192,7 +194,7 @@ const StrategyPage = () => {
             onClick={() => scrollToSection("metrics")}
           >
             <IoIosCheckboxOutline size={16} className="mr-2 shrink-0" />
-            <p className={`font-normal ${isExpanded ? " " : "hidden"}`}>
+            <p className={`font-normal ${isExpanded ? "" : "hidden"}`}>
               Metrics
             </p>
           </Button>
@@ -203,7 +205,7 @@ const StrategyPage = () => {
             onClick={() => scrollToSection("annualreturns")}
           >
             <IoCalendarClearOutline className="mr-2 shrink-0" />
-            <p className={`font-normal ${isExpanded ? " " : "hidden"}`}>
+            <p className={`font-normal ${isExpanded ? "" : "hidden"}`}>
               Annual Returns
             </p>
           </Button>
@@ -214,7 +216,7 @@ const StrategyPage = () => {
             onClick={() => scrollToSection("monthlyreturns")}
           >
             <IoCalendarOutline className="mr-2 shrink-0" />
-            <p className={`font-normal ${isExpanded ? " " : "hidden"}`}>
+            <p className={`font-normal ${isExpanded ? "" : "hidden"}`}>
               Monthly Returns
             </p>
           </Button>
@@ -225,7 +227,7 @@ const StrategyPage = () => {
             onClick={() => scrollToSection("drawdowns")}
           >
             <BsGraphDownArrow className="mr-2 shrink-0" />
-            <p className={`font-normal ${isExpanded ? " " : "hidden"}`}>
+            <p className={`font-normal ${isExpanded ? "" : "hidden"}`}>
               Drawdown Graphs
             </p>
           </Button>
@@ -236,7 +238,7 @@ const StrategyPage = () => {
             onClick={() => scrollToSection("rollingreturns")}
           >
             <TfiStatsUp className="mr-2 shrink-0" />
-            <p className={`font-normal ${isExpanded ? " " : "hidden"}`}>
+            <p className={`font-normal ${isExpanded ? "" : "hidden"}`}>
               Rolling Returns
             </p>
           </Button>
@@ -245,19 +247,18 @@ const StrategyPage = () => {
             size={"default"}
             className="w-full flex items-center justify-start"
             onClick={async () => {
-              setMonteCarloSelected(false);
+              await setMonteCarloSelected(false);
               scrollToSection("trades");
-
             }}
           >
             <BsTable className="mr-2 shrink-0" />
-            <p className={`font-normal ${isExpanded ? " " : "hidden"}`}>
+            <p className={`font-normal ${isExpanded ? "" : "hidden"}`}>
               Trades
             </p>
           </Button>
           <p
             className={`ml-7 !mb-4 !mt-10 text-gray-400 text-xs uppercase ${
-              isExpanded ? " " : "hidden"
+              isExpanded ? "" : "hidden"
             }`}
           >
             Analysis
@@ -271,7 +272,7 @@ const StrategyPage = () => {
             onClick={() => setMonteCarloSelected(!monteCarloSelected)}
           >
             <IoAnalyticsSharp className="mr-2 shrink-0" />
-            <p className={`font-normal ${isExpanded ? " " : "hidden"}`}>
+            <p className={`font-normal ${isExpanded ? "" : "hidden"}`}>
               Monte Carlo
             </p>
           </Button>
@@ -329,44 +330,44 @@ const StrategyPage = () => {
         {monteCarloSelected ? (
           <ScrollArea className="flex-1 rounded-md bg-slate-50 dark:bg-black">
             <div className="p-6">
-              <StrategyInfo strategy={strategy} />
-              <MonteCarloAnalysis strategy={strategy} trades={trades} />
+              <StrategyInfo strategy={portfolio} />
+              <MonteCarloAnalysis strategy={portfolio} trades={trades} />
             </div>
           </ScrollArea>
         ) : (
           <ScrollArea className="flex-1 rounded-md bg-slate-50 dark:bg-black">
             <div className="p-6">
-              <StrategyInfo strategy={strategy} />
-              <StrategyConfig strategy={strategy} trades={trades} />
+              <StrategyInfo strategy={portfolio} />
+              <StrategyConfig strategy={portfolio} trades={trades} />
             </div>
             <div
               id="summary"
               ref={sectionRefs.summary}
               className="p-6 space-y-8"
             >
-              <Summary strategy={strategy} />
+              <Summary strategy={portfolio} />
               <PortfolioGrowth
-                strategy={strategy}
+                strategy={portfolio}
                 trades={trades}
                 plotByTrade={plotByTrade}
               />
               <Drawdowns
-                strategy={strategy}
+                strategy={portfolio}
                 trades={trades}
                 plotByTrade={plotByTrade}
               />
               <AnnualReturnsGraph
-                strategy={strategy}
+                strategy={portfolio}
                 trades={trades}
                 dataInDollars={dataInDollars}
               />
               <MonthlyReturnsGraph
-                strategy={strategy}
+                strategy={portfolio}
                 trades={trades}
                 dataInDollars={dataInDollars}
               />
-              <MonthlyNetProfitGraph strategy={strategy} trades={trades} />
-              <DailyNetProfitGraph strategy={strategy} trades={trades} />
+              <MonthlyNetProfitGraph strategy={portfolio} trades={trades} />
+              <DailyNetProfitGraph strategy={portfolio} trades={trades} />
               <MonthlyAnalysis trades={trades} />
               <TradeDistribution trades={trades} />
               <TrailingReturns />
@@ -383,28 +384,28 @@ const StrategyPage = () => {
               ref={sectionRefs.metrics}
               className="p-6 space-y-8"
             >
-              <RiskandReturnMetrics strategy={strategy} />
+              <RiskandReturnMetrics strategy={portfolio} />
             </div>
             <div
               id="annualreturns"
               ref={sectionRefs.annualreturns}
               className="p-6 space-y-8"
             >
-              <AnnualReturns strategy={strategy} trades={trades} />
+              <AnnualReturns strategy={portfolio} trades={trades} />
             </div>
             <div
               id="monthlyreturns"
               ref={sectionRefs.monthlyreturns}
               className="p-6 space-y-8"
             >
-              <MonthlyReturns strategy={strategy} trades={trades} />
+              <MonthlyReturns strategy={portfolio} trades={trades} />
             </div>
             <div
               id="drawdowns"
               ref={sectionRefs.drawdowns}
               className="p-6 space-y-8"
             >
-              <BiggestDrawdowns strategy={strategy} trades={trades} />
+              <BiggestDrawdowns strategy={portfolio} trades={trades} />
             </div>
             <div
               id="rollingreturns"
@@ -412,7 +413,7 @@ const StrategyPage = () => {
               className="p-6 space-y-8"
             ></div>
             <div id="trades" ref={sectionRefs.trades} className="p-6 space-y-8">
-              <TradingPerformance strategy={strategy} />
+              <TradingPerformance strategy={portfolio} />
               <TradeList trades={trades} />
             </div>
           </ScrollArea>
@@ -422,4 +423,4 @@ const StrategyPage = () => {
   );
 };
 
-export default StrategyPage;
+export default PortfolioPage;

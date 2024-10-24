@@ -29,24 +29,31 @@ const Drawdowns = ({ strategy, trades, plotByTrade = false }) => {
       maxEquity = Math.max(maxEquity, equity);
       const drawdownPercent = ((equity - maxEquity) / maxEquity) * 100;
       const drawdownDollar = equity - maxEquity;
-      equityCurve.push({
+      
+      // Include both date and index-based values
+      const dataPoint = {
         date: trade.exitDate.toDate().getTime(),
         equity: equity,
         drawdownPercent: drawdownPercent,
         drawdownDollar: drawdownDollar,
-        tradeNumber: trade.order + 1,
-      });
+        tradeNumber: index + 1,
+        // Use xValue for consistent animation
+        xValue: plotByTrade ? index + 1 : trade.exitDate.toDate().getTime(),
+      };
+      equityCurve.push(dataPoint);
     });
 
     return {
       drawdownData: equityCurve,
       drawdownDataDollar: equityCurve,
     };
-  }, [trades, strategy.metrics.initialCapital]);
+  }, [trades, strategy.metrics.initialCapital]); // Remove plotByTrade dependency
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
-      const xValue = plotByTrade ? `Trade ${label}` : new Date(label).toLocaleDateString();
+      const xValue = plotByTrade 
+        ? `Trade ${label}` 
+        : new Date(label).toLocaleDateString();
       return (
         <div className="custom-tooltip bg-white dark:bg-gray-800 p-4 border border-gray-300 dark:border-gray-700 rounded-md shadow-lg">
           <p className="label text-gray-700 dark:text-white font-medium">{xValue}</p>
@@ -64,7 +71,9 @@ const Drawdowns = ({ strategy, trades, plotByTrade = false }) => {
 
   const CustomTooltipDollar = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
-      const xValue = plotByTrade ? `Trade ${label}` : new Date(label).toLocaleDateString();
+      const xValue = plotByTrade 
+        ? `Trade ${label}` 
+        : new Date(label).toLocaleDateString();
       return (
         <div className="custom-tooltip bg-white dark:bg-gray-800 p-4 border border-gray-300 dark:border-gray-700 rounded-md shadow-lg">
           <p className="label text-gray-700 dark:text-white font-medium">{xValue}</p>
@@ -85,24 +94,27 @@ const Drawdowns = ({ strategy, trades, plotByTrade = false }) => {
     return new Intl.DateTimeFormat("en-US", options).format(new Date(date));
   };
 
-  const xAxisProps = plotByTrade
-    ? {
-        dataKey: "tradeNumber",
-        type: "number",
-        domain: [1, drawdownData.length],
-        tickFormatter: (value) => `Trade ${value}`,
-      }
-    : {
-        dataKey: "date",
-        type: "number",
-        scale: "time",
-        domain: [
+  const xAxisFormatter = (value) => {
+    if (plotByTrade) {
+      return `Trade ${value}`;
+    }
+    return dateFormatter(value);
+  };
+
+  // Use consistent xValue for both charts
+  const xAxisProps = {
+    dataKey: "xValue",
+    type: "number",
+    scale: plotByTrade ? "linear" : "time",
+    domain: plotByTrade 
+      ? [1, drawdownData.length]
+      : [
           Math.min(...drawdownData.map((d) => d.date)),
           Math.max(...drawdownData.map((d) => d.date)),
         ],
-        tickFormatter: dateFormatter,
-        interval: Math.floor(drawdownData.length / 12),
-      };
+    tickFormatter: xAxisFormatter,
+    interval: plotByTrade ? undefined : Math.floor(drawdownData.length / 12),
+  };
 
   return (
     <div className="rounded-xl shadow-2xl dark:border w-full bg-white dark:bg-black py-6 px-10">
@@ -136,6 +148,7 @@ const Drawdowns = ({ strategy, trades, plotByTrade = false }) => {
             fill="url(#colorDrawdownDollar)"
             strokeWidth={2}
             dot={false}
+            isAnimationActive={true}
           />
         </AreaChart>
       </ResponsiveContainer>
@@ -166,6 +179,7 @@ const Drawdowns = ({ strategy, trades, plotByTrade = false }) => {
             fill="url(#colorDrawdown)"
             strokeWidth={2}
             dot={false}
+            isAnimationActive={true}
           />
         </AreaChart>
       </ResponsiveContainer>

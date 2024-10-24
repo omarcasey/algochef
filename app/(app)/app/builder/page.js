@@ -11,6 +11,7 @@ import {
   addDoc,
   serverTimestamp,
   doc,
+  writeBatch,
 } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -48,6 +49,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
+import { toast } from "@/components/ui/use-toast";
 
 // Mini Equity Curve Component
 const MiniEquityCurve = React.memo(({ trades, width = 120, height = 40 }) => {
@@ -248,19 +250,26 @@ const PortfolioBuilder = () => {
   const generateCombinedTrades = (selectedStrategiesData, allocations) => {
     let combinedTrades = [];
 
+    // First combine all trades with their allocations
     selectedStrategiesData.forEach((strategy, index) => {
       const allocation = allocations[index];
       const adjustedTrades = strategy.trades.map((trade) => ({
         ...trade,
         size: trade.size * allocation,
         netProfit: trade.netProfit * allocation,
+        originalStrategy: strategy.id, // Optionally keep track of which strategy it came from
       }));
       combinedTrades = combinedTrades.concat(adjustedTrades);
     });
 
-    return combinedTrades.sort(
-      (a, b) => new Date(a.exitDate) - new Date(b.exitDate)
-    );
+    // Sort by exit date
+    combinedTrades.sort((a, b) => new Date(a.exitDate) - new Date(b.exitDate));
+
+    // Reassign order numbers sequentially
+    return combinedTrades.map((trade, index) => ({
+      ...trade,
+      order: index + 1, // If you want to start from 1 instead of 0
+    }));
   };
 
   // Function to calculate total combinations
@@ -365,7 +374,7 @@ const PortfolioBuilder = () => {
           strategies: combination,
           strategyNames: selectedStrategiesData.map((s) => s.name),
           trades: combinedTrades,
-          ...portfolioMetrics,
+          metrics: portfolioMetrics,
         };
 
         setRankedPortfolios((currentRanked) =>
@@ -406,30 +415,42 @@ const PortfolioBuilder = () => {
   };
 
   // Modified save portfolio function
-  const savePortfolio = async (portfolio, isPermanent = false) => {
-    if (!isPermanent) {
-      const updatedResults = [...rankedPortfolios, portfolio];
-      setRankedPortfolios(updatedResults);
-      localStorage.setItem("portfolioResults", JSON.stringify(updatedResults));
-      return portfolio.id;
-    }
-
+  const savePortfolio = async (portfolio) => {
     try {
-      const portfolioData = {
-        ...portfolio,
+      // Create a write batch
+      const batch = writeBatch(firestore);
+
+      // Create the main portfolio document reference
+      const portfolioRef = doc(collection(firestore, "portfolios"));
+
+      // Prepare the portfolio data without the trades array
+      const { trades, ...portfolioData } = portfolio;
+      const portfolioDoc = {
+        ...portfolioData,
         userId: user.uid,
-        temporary: false,
         createdAt: serverTimestamp(),
+        name: portfolioData.id,
       };
 
-      const docRef = await addDoc(
-        collection(firestore, "portfolios"),
-        portfolioData
-      );
-      return docRef.id;
+      // Set the main portfolio document
+      batch.set(portfolioRef, portfolioDoc);
+
+      // Create a trades subcollection and add each trade as a separate document
+      trades.forEach((trade) => {
+        const tradeRef = doc(collection(portfolioRef, "trades"));
+        batch.set(tradeRef, {
+          ...trade,
+        });
+      });
+
+      // Commit the batch
+      await batch.commit();
+
+      // Return the portfolio ID
+      return portfolioRef.id;
     } catch (error) {
       console.error("Error saving portfolio:", error);
-      return null;
+      throw error;
     }
   };
 
@@ -612,6 +633,7 @@ const PortfolioBuilder = () => {
                 <TableHead>Name</TableHead>
                 <TableHead>Strategies</TableHead>
                 <TableHead>Equity Curve</TableHead>
+                <TableHead>Total Trades</TableHead>
                 <TableHead>Net Profit</TableHead>
                 <TableHead>Annualized Return</TableHead>
                 <TableHead>Sharpe Ratio</TableHead>
@@ -643,21 +665,45 @@ const PortfolioBuilder = () => {
                       </Tooltip>
                     </TooltipProvider>
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="px-4">
                     <MiniEquityCurve trades={portfolio.trades} />
                   </TableCell>
-                  <TableCell>${portfolio.netProfit.toLocaleString()}</TableCell>
+                  <TableCell>{portfolio.metrics.totalTrades}</TableCell>
                   <TableCell>
-                    {portfolio.annualizedReturn.toFixed(2)}%
+                    ${portfolio.metrics.netProfit.toLocaleString()}
                   </TableCell>
-                  <TableCell>{portfolio.sharpeRatio.toFixed(2)}</TableCell>
-                  <TableCell>{portfolio.maxDrawdownPct.toFixed(2)}%</TableCell>
+                  <TableCell>
+                    {portfolio.metrics.annualizedReturn.toFixed(2)}%
+                  </TableCell>
+                  <TableCell>
+                    {portfolio.metrics.sharpeRatio.toFixed(2)}
+                  </TableCell>
+                  <TableCell>
+                    {portfolio.metrics.maxDrawdownPct.toFixed(2)}%
+                  </TableCell>
                   <TableCell>
                     <div className="flex space-x-2">
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => savePortfolio(portfolio, true)}
+                        onClick={async () => {
+                          try {
+                            await savePortfolio(portfolio);
+                            // Optionally show success message
+                            toast({
+                              title: "Portfolio saved successfully",
+                              description:
+                                "You can find it in your saved portfolios",
+                            });
+                          } catch (error) {
+                            // Handle error
+                            toast({
+                              title: "Error saving portfolio",
+                              description: error.message,
+                              variant: "destructive",
+                            });
+                          }
+                        }}
                       >
                         Save
                       </Button>
