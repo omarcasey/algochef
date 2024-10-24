@@ -11,7 +11,6 @@ import {
   addDoc,
   serverTimestamp,
   doc,
-  writeBatch,
 } from "firebase/firestore";
 import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -49,7 +48,6 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { toast } from "@/components/ui/use-toast";
 
 // Mini Equity Curve Component
 const MiniEquityCurve = React.memo(({ trades, width = 120, height = 40 }) => {
@@ -200,6 +198,9 @@ const PortfolioBuilder = () => {
   const [rankedPortfolios, setRankedPortfolios] = useState([]);
   const [processedCount, setProcessedCount] = useState(0);
   const [totalCombinations, setTotalCombinations] = useState(0);
+  const [searchMethod, setSearchMethod] = useState("bruteforce");
+  const [populationSize, setPopulationSize] = useState(50);
+  const [generations, setGenerations] = useState(20);
 
   // Query to fetch user's strategies
   const strategiesQuery = query(
@@ -250,26 +251,147 @@ const PortfolioBuilder = () => {
   const generateCombinedTrades = (selectedStrategiesData, allocations) => {
     let combinedTrades = [];
 
-    // First combine all trades with their allocations
     selectedStrategiesData.forEach((strategy, index) => {
       const allocation = allocations[index];
       const adjustedTrades = strategy.trades.map((trade) => ({
         ...trade,
         size: trade.size * allocation,
         netProfit: trade.netProfit * allocation,
-        originalStrategy: strategy.id, // Optionally keep track of which strategy it came from
       }));
       combinedTrades = combinedTrades.concat(adjustedTrades);
     });
 
-    // Sort by exit date
-    combinedTrades.sort((a, b) => new Date(a.exitDate) - new Date(b.exitDate));
+    return combinedTrades.sort(
+      (a, b) => new Date(a.exitDate) - new Date(b.exitDate)
+    );
+  };
 
-    // Reassign order numbers sequentially
-    return combinedTrades.map((trade, index) => ({
-      ...trade,
-      order: index + 1, // If you want to start from 1 instead of 0
-    }));
+  // Genetic Algorithm Helper Functions
+  const GeneticAlgorithm = {
+    // Generate initial population
+    generateInitialPopulation: (
+      strategyIds,
+      minSize,
+      maxSize,
+      populationSize
+    ) => {
+      const population = [];
+      for (let i = 0; i < populationSize; i++) {
+        const size =
+          Math.floor(Math.random() * (maxSize - minSize + 1)) + minSize;
+        const shuffled = [...strategyIds].sort(() => Math.random() - 0.5);
+        const chromosome = shuffled.slice(0, size);
+        population.push(chromosome);
+      }
+      return population;
+    },
+
+    // Fitness function
+    calculateFitness: async (
+      chromosome,
+      strategiesWithTrades,
+      totalCapital
+    ) => {
+      const selectedStrategiesData = strategiesWithTrades.filter((strategy) =>
+        chromosome.includes(strategy.id)
+      );
+
+      const equalAllocation = 1 / chromosome.length;
+      const allocations = new Array(chromosome.length).fill(equalAllocation);
+
+      const combinedTrades = generateCombinedTrades(
+        selectedStrategiesData,
+        allocations
+      );
+      const metrics = calculateTradingMetrics(combinedTrades, totalCapital);
+
+      return {
+        chromosome,
+        trades: combinedTrades,
+        metrics,
+        strategyNames: selectedStrategiesData.map((s) => s.name),
+      };
+    },
+
+    // Selection (Tournament Selection)
+    selection: (population, fitnessScores, tournamentSize = 3) => {
+      const tournament = Array(tournamentSize)
+        .fill()
+        .map(() => population[Math.floor(Math.random() * population.length)]);
+
+      const tournamentFitness = tournament.map((chromosome) => {
+        const fitness = fitnessScores.find(
+          (f) => JSON.stringify(f.chromosome) === JSON.stringify(chromosome)
+        );
+        return fitness ? fitness.metrics[rankingMetric] : -Infinity;
+      });
+
+      const winnerIndex = tournamentFitness.indexOf(
+        Math.max(...tournamentFitness)
+      );
+      return tournament[winnerIndex];
+    },
+
+    // Crossover (Single Point)
+    crossover: (parent1, parent2, minSize, maxSize) => {
+      if (Math.random() > 0.7) return [parent1, parent2]; // Crossover rate
+
+      const point = Math.floor(
+        Math.random() * Math.min(parent1.length, parent2.length)
+      );
+
+      let child1 = [
+        ...new Set([...parent1.slice(0, point), ...parent2.slice(point)]),
+      ];
+      let child2 = [
+        ...new Set([...parent2.slice(0, point), ...parent1.slice(point)]),
+      ];
+
+      // Ensure children meet size constraints
+      child1 = child1.slice(
+        0,
+        Math.min(maxSize, Math.max(minSize, child1.length))
+      );
+      child2 = child2.slice(
+        0,
+        Math.min(maxSize, Math.max(minSize, child2.length))
+      );
+
+      return [child1, child2];
+    },
+
+    // Mutation
+    mutation: (
+      chromosome,
+      allStrategyIds,
+      minSize,
+      maxSize,
+      mutationRate = 0.1
+    ) => {
+      if (Math.random() > mutationRate) return chromosome;
+
+      const mutated = [...chromosome];
+
+      // Randomly add or remove a strategy
+      if (Math.random() < 0.5 && mutated.length > minSize) {
+        // Remove random strategy
+        const removeIndex = Math.floor(Math.random() * mutated.length);
+        mutated.splice(removeIndex, 1);
+      } else if (mutated.length < maxSize) {
+        // Add random strategy
+        const availableStrategies = allStrategyIds.filter(
+          (id) => !mutated.includes(id)
+        );
+        if (availableStrategies.length > 0) {
+          const addIndex = Math.floor(
+            Math.random() * availableStrategies.length
+          );
+          mutated.push(availableStrategies[addIndex]);
+        }
+      }
+
+      return mutated;
+    },
   };
 
   // Function to calculate total combinations
@@ -316,7 +438,7 @@ const PortfolioBuilder = () => {
     return result;
   };
 
-  const startComputation = async () => {
+  const startBruteForceSearch = async () => {
     setIsComputing(true);
     setComputationProgress(0);
     setProcessedCount(0);
@@ -374,7 +496,7 @@ const PortfolioBuilder = () => {
           strategies: combination,
           strategyNames: selectedStrategiesData.map((s) => s.name),
           trades: combinedTrades,
-          metrics: portfolioMetrics,
+          ...portfolioMetrics,
         };
 
         setRankedPortfolios((currentRanked) =>
@@ -403,6 +525,130 @@ const PortfolioBuilder = () => {
     }
   };
 
+  // Genetic Algorithm Implementation
+  const startGeneticSearch = async () => {
+    setIsComputing(true);
+    setComputationProgress(0);
+    setProcessedCount(0);
+    setRankedPortfolios([]);
+
+    try {
+      // Fetch all trades for selected strategies at once
+      const strategiesWithTrades = await Promise.all(
+        selectedStrategies.map(async (strategyId) => {
+          const strategy = strategies.find((s) => s.id === strategyId);
+          const tradesQuery = query(
+            collection(firestore, `strategies/${strategyId}/trades`),
+            orderBy("exitDate", "asc")
+          );
+          const tradesSnapshot = await getDocs(tradesQuery);
+          const trades = tradesSnapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }));
+          return { ...strategy, trades };
+        })
+      );
+
+      // Generate initial population
+      let population = GeneticAlgorithm.generateInitialPopulation(
+        selectedStrategies,
+        minStrategies,
+        maxStrategies,
+        populationSize
+      );
+
+      // Evolution loop
+      for (let generation = 0; generation < generations; generation++) {
+        // Calculate fitness for current population
+        const fitnessPromises = population.map((chromosome) =>
+          GeneticAlgorithm.calculateFitness(
+            chromosome,
+            strategiesWithTrades,
+            totalCapital
+          )
+        );
+        let fitnessScores = await Promise.all(fitnessPromises);
+
+        // Sort by ranking function and update best portfolios
+        fitnessScores.sort(
+          (a, b) => b.metrics[rankingFunction] - a.metrics[rankingFunction]
+        );
+
+        // Update ranked portfolios
+        setRankedPortfolios((current) => {
+          const newPortfolios = fitnessScores.map((fitness) => ({
+            id: crypto.randomUUID(),
+            strategies: fitness.chromosome,
+            strategyNames: fitness.strategyNames,
+            trades: fitness.trades,
+            ...fitness.metrics,
+          }));
+
+          return [...current, ...newPortfolios]
+            .sort((a, b) => b[rankingFunction] - a[rankingFunction])
+            .slice(0, maxStoredPortfolios);
+        });
+
+        // Create new population
+        const newPopulation = [];
+        while (newPopulation.length < populationSize) {
+          const parent1 = GeneticAlgorithm.selection(
+            population,
+            fitnessScores,
+            3
+          );
+          const parent2 = GeneticAlgorithm.selection(
+            population,
+            fitnessScores,
+            3
+          );
+
+          let [child1, child2] = GeneticAlgorithm.crossover(
+            parent1,
+            parent2,
+            minStrategies,
+            maxStrategies
+          );
+
+          child1 = GeneticAlgorithm.mutation(
+            child1,
+            selectedStrategies,
+            minStrategies,
+            maxStrategies
+          );
+          child2 = GeneticAlgorithm.mutation(
+            child2,
+            selectedStrategies,
+            minStrategies,
+            maxStrategies
+          );
+
+          newPopulation.push(child1, child2);
+        }
+
+        population = newPopulation.slice(0, populationSize);
+
+        setProcessedCount(generation + 1);
+        setComputationProgress(((generation + 1) / generations) * 100);
+      }
+    } catch (error) {
+      console.error("Error in genetic search:", error);
+    } finally {
+      setIsComputing(false);
+      setComputationProgress(100);
+    }
+  };
+
+  // Modified startComputation to handle both methods
+  const startComputation = async () => {
+    if (searchMethod === "genetic") {
+      await startGeneticSearch();
+    } else {
+      await startBruteForceSearch(); // Rename your existing computation function
+    }
+  };
+
   const saveToLocalStorage = () => {
     try {
       localStorage.setItem(
@@ -415,42 +661,30 @@ const PortfolioBuilder = () => {
   };
 
   // Modified save portfolio function
-  const savePortfolio = async (portfolio) => {
+  const savePortfolio = async (portfolio, isPermanent = false) => {
+    if (!isPermanent) {
+      const updatedResults = [...rankedPortfolios, portfolio];
+      setRankedPortfolios(updatedResults);
+      localStorage.setItem("portfolioResults", JSON.stringify(updatedResults));
+      return portfolio.id;
+    }
+
     try {
-      // Create a write batch
-      const batch = writeBatch(firestore);
-
-      // Create the main portfolio document reference
-      const portfolioRef = doc(collection(firestore, "portfolios"));
-
-      // Prepare the portfolio data without the trades array
-      const { trades, ...portfolioData } = portfolio;
-      const portfolioDoc = {
-        ...portfolioData,
+      const portfolioData = {
+        ...portfolio,
         userId: user.uid,
+        temporary: false,
         createdAt: serverTimestamp(),
-        name: portfolioData.id,
       };
 
-      // Set the main portfolio document
-      batch.set(portfolioRef, portfolioDoc);
-
-      // Create a trades subcollection and add each trade as a separate document
-      trades.forEach((trade) => {
-        const tradeRef = doc(collection(portfolioRef, "trades"));
-        batch.set(tradeRef, {
-          ...trade,
-        });
-      });
-
-      // Commit the batch
-      await batch.commit();
-
-      // Return the portfolio ID
-      return portfolioRef.id;
+      const docRef = await addDoc(
+        collection(firestore, "portfolios"),
+        portfolioData
+      );
+      return docRef.id;
     } catch (error) {
       console.error("Error saving portfolio:", error);
-      throw error;
+      return null;
     }
   };
 
@@ -561,23 +795,67 @@ const PortfolioBuilder = () => {
             </p>
           </div>
         </div>
-        <div>
-          <label className="block text-sm font-medium mb-1">
-            Ranking Function:
-          </label>
-          <Select value={rankingFunction} onValueChange={setRankingFunction}>
-            <SelectTrigger className="w-[180px]">
-              <SelectValue placeholder="Select ranking function" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="netProfit">Net Profit</SelectItem>
-              <SelectItem value="annualizedReturn">
-                Annualized Return
-              </SelectItem>
-              <SelectItem value="sharpeRatio">Sharpe Ratio</SelectItem>
-              <SelectItem value="maxDrawdownPct">Max Drawdown %</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="flex space-x-4 mb-4">
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Ranking Function:
+            </label>
+            <Select value={rankingFunction} onValueChange={setRankingFunction}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Select ranking function" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="netProfit">Net Profit</SelectItem>
+                <SelectItem value="annualizedReturn">
+                  Annualized Return
+                </SelectItem>
+                <SelectItem value="sharpeRatio">Sharpe Ratio</SelectItem>
+                <SelectItem value="maxDrawdownPct">Max Drawdown %</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="block text-sm font-medium mb-1">
+              Search Method:
+            </label>
+            <Select value={searchMethod} onValueChange={setSearchMethod}>
+              <SelectTrigger className="w-[180px]">
+                <SelectValue placeholder="Select search method" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="bruteforce">Brute Force</SelectItem>
+                <SelectItem value="genetic">Genetic Algorithm</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          {searchMethod === "genetic" && (
+            <>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Population Size:
+                </label>
+                <Input
+                  type="number"
+                  value={populationSize}
+                  onChange={(e) => setPopulationSize(Number(e.target.value))}
+                  min={10}
+                  max={200}
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium mb-1">
+                  Generations:
+                </label>
+                <Input
+                  type="number"
+                  value={generations}
+                  onChange={(e) => setGenerations(Number(e.target.value))}
+                  min={5}
+                  max={100}
+                />
+              </div>
+            </>
+          )}
         </div>
       </div>
 
@@ -633,7 +911,6 @@ const PortfolioBuilder = () => {
                 <TableHead>Name</TableHead>
                 <TableHead>Strategies</TableHead>
                 <TableHead>Equity Curve</TableHead>
-                <TableHead>Total Trades</TableHead>
                 <TableHead>Net Profit</TableHead>
                 <TableHead>Annualized Return</TableHead>
                 <TableHead>Sharpe Ratio</TableHead>
@@ -665,45 +942,21 @@ const PortfolioBuilder = () => {
                       </Tooltip>
                     </TooltipProvider>
                   </TableCell>
-                  <TableCell className="px-4">
+                  <TableCell>
                     <MiniEquityCurve trades={portfolio.trades} />
                   </TableCell>
-                  <TableCell>{portfolio.metrics.totalTrades}</TableCell>
+                  <TableCell>${portfolio.netProfit.toLocaleString()}</TableCell>
                   <TableCell>
-                    ${portfolio.metrics.netProfit.toLocaleString()}
+                    {portfolio.annualizedReturn.toFixed(2)}%
                   </TableCell>
-                  <TableCell>
-                    {portfolio.metrics.annualizedReturn.toFixed(2)}%
-                  </TableCell>
-                  <TableCell>
-                    {portfolio.metrics.sharpeRatio.toFixed(2)}
-                  </TableCell>
-                  <TableCell>
-                    {portfolio.metrics.maxDrawdownPct.toFixed(2)}%
-                  </TableCell>
+                  <TableCell>{portfolio.sharpeRatio.toFixed(2)}</TableCell>
+                  <TableCell>{portfolio.maxDrawdownPct.toFixed(2)}%</TableCell>
                   <TableCell>
                     <div className="flex space-x-2">
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={async () => {
-                          try {
-                            await savePortfolio(portfolio);
-                            // Optionally show success message
-                            toast({
-                              title: "Portfolio saved successfully",
-                              description:
-                                "You can find it in your saved portfolios",
-                            });
-                          } catch (error) {
-                            // Handle error
-                            toast({
-                              title: "Error saving portfolio",
-                              description: error.message,
-                              variant: "destructive",
-                            });
-                          }
-                        }}
+                        onClick={() => savePortfolio(portfolio, true)}
                       >
                         Save
                       </Button>
