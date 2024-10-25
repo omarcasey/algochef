@@ -91,9 +91,9 @@ const Summary = ({ strategy }) => {
                     <TooltipContent>
                       <p>
                         Occured on{" "}
-                        {strategy?.metrics?.maxDrawdownDate
+                        {/* {strategy?.metrics?.maxDrawdownDate
                           .toDate()
-                          .toLocaleDateString()}
+                          .toLocaleDateString()} */}
                       </p>
                     </TooltipContent>
                   </Tooltip>

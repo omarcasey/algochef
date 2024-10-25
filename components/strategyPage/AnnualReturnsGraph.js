@@ -115,8 +115,6 @@ const AnnualReturnsGraph = ({ strategy, trades, dataInDollars = false }) => {
     });
   }, [trades, dataInDollars, strategy]);
 
-  console.log(data);
-
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       const {

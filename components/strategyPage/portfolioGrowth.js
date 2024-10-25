@@ -1,7 +1,7 @@
 import { useTheme } from "next-themes";
 import React, { useEffect, useMemo } from "react";
 import {
-  AreaChart,
+  ComposedChart,  // Changed from AreaChart to ComposedChart
   Area,
   XAxis,
   YAxis,
@@ -11,29 +11,52 @@ import {
   ReferenceLine,
 } from "recharts";
 
-const PortfolioGrowth = ({ strategy, trades, plotByTrade = false }) => {
+const PortfolioGrowth = ({ strategy, trades, plotByTrade = false, benchmarkData }) => {
   // Process trades to create equity curve data
   const data = useMemo(() => {
     if (!trades || trades.length === 0) {
-      console.log("No trades data available");
       return [];
     }
 
+    // Process strategy data
     let equity = strategy.metrics.initialCapital;
-    const equityCurve = [];
+    const allData = [];
 
-    // Use array index instead of trade.order
+    // Add initial point
+    allData.push({
+      date: trades[0].exitDate.toDate().getTime(),
+      equity: strategy.metrics.initialCapital
+    });
+
+    // Add trade points
     trades.forEach((trade, index) => {
       equity += trade.netProfit;
-      equityCurve.push({
+      allData.push({
         date: trade.exitDate.toDate().getTime(),
         equity: equity,
-        tradeNumber: index + 1, // Simply use the array index + 1
+        tradeNumber: index + 1,
       });
     });
 
-    return equityCurve;
-  }, [trades, strategy.metrics.initialCapital]);
+    // Add benchmark data points
+    if (benchmarkData) {
+      benchmarkData.forEach(point => {
+        // Find if there's already a point for this date
+        const existingPoint = allData.find(d => d.date === point.date);
+        if (existingPoint) {
+          existingPoint.benchmarkEquity = point.benchmarkEquity;
+        } else {
+          allData.push({
+            date: point.date,
+            benchmarkEquity: point.benchmarkEquity
+          });
+        }
+      });
+    }
+
+    // Sort all points by date
+    return allData.sort((a, b) => a.date - b.date);
+  }, [trades, strategy.metrics.initialCapital, benchmarkData]);
 
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
@@ -43,16 +66,27 @@ const PortfolioGrowth = ({ strategy, trades, plotByTrade = false }) => {
       return (
         <div className="bg-white dark:bg-gray-800 p-4 border border-gray-300 dark:border-gray-700 rounded-md shadow-lg">
           <p className="text-gray-700 dark:text-white font-medium">{xValue}</p>
-          <div className="flex flex-row items-center">
-            <div className="w-2 h-2 bg-blue-600 dark:bg-green-400 rounded-full mr-2" />
-            <p className="text-blue-600 dark:text-green-400 font-semibold">
-              {`${strategy.name}: $${payload[0].value.toLocaleString()}`}
-            </p>
+          <div className="flex flex-col space-y-2">
+            {payload[0]?.value && (
+              <div className="flex flex-row items-center">
+                <div className="w-2 h-2 bg-blue-600 dark:bg-green-400 rounded-full mr-2" />
+                <p className="text-blue-600 dark:text-green-400 font-semibold">
+                  {`${strategy.name}: $${payload[0].value.toLocaleString()}`}
+                </p>
+              </div>
+            )}
+            {payload[1]?.value && (
+              <div className="flex flex-row items-center">
+                <div className="w-2 h-2 bg-red-500 dark:bg-red-400 rounded-full mr-2" />
+                <p className="text-red-500 dark:text-red-400 font-semibold">
+                  {`${strategy.benchmark}: $${payload[1].value.toLocaleString()}`}
+                </p>
+              </div>
+            )}
           </div>
         </div>
       );
     }
-
     return null;
   };
 
@@ -67,7 +101,7 @@ const PortfolioGrowth = ({ strategy, trades, plotByTrade = false }) => {
     ? {
         dataKey: "tradeNumber",
         type: "number",
-        domain: [1, data.length],
+        domain: [1, trades.length],
         tickFormatter: (value) => `Trade ${value}`,
       }
     : {
@@ -82,47 +116,13 @@ const PortfolioGrowth = ({ strategy, trades, plotByTrade = false }) => {
         interval: Math.floor(data.length / 12),
       };
 
-  const referenceLines = useMemo(() => {
-    if (plotByTrade) return [];
-
-    const startDate = new Date(Math.min(...data.map((d) => d.date)));
-    const endDate = new Date(Math.max(...data.map((d) => d.date)));
-    const lines = [];
-
-    let currentDate = new Date(startDate.getFullYear(), 0, 1);
-    const yearsSince1970 = currentDate.getFullYear() - 1970;
-    const yearsToAdd = 5 - (yearsSince1970 % 5);
-    currentDate.setFullYear(currentDate.getFullYear() + yearsToAdd);
-
-    while (currentDate <= endDate) {
-      if (currentDate >= startDate) {
-        lines.push(
-          <ReferenceLine
-            key={currentDate.getTime()}
-            x={currentDate.getTime()}
-            stroke="#888"
-            strokeDasharray="3 3"
-            label={{
-              value: currentDate.getFullYear(),
-              position: "top",
-              fill: "#888",
-            }}
-          />
-        );
-      }
-      currentDate.setFullYear(currentDate.getFullYear() + 5);
-    }
-
-    return lines;
-  }, [plotByTrade, data]);
-
   return (
     <div className="rounded-xl shadow-2xl dark:border w-full bg-white dark:bg-black py-6 px-10">
       <h1 className="text-xl text-blue-900 dark:text-white saturate-200 font-medium mb-6">
         Portfolio Growth
       </h1>
       <ResponsiveContainer width="100%" height={400}>
-        <AreaChart data={data} margin={{ left: 20, right: 20 }}>
+        <ComposedChart data={data} margin={{ left: 20, right: 20 }}>
           <defs>
             <linearGradient id="colorUv" x1="0" y1="0" x2="0" y2="1">
               <stop
@@ -133,6 +133,18 @@ const PortfolioGrowth = ({ strategy, trades, plotByTrade = false }) => {
               <stop
                 offset="95%"
                 stopColor={theme === "dark" ? "#22c55e" : "#097EF2"}
+                stopOpacity={0}
+              />
+            </linearGradient>
+            <linearGradient id="colorBenchmark" x1="0" y1="0" x2="0" y2="1">
+              <stop
+                offset="5%"
+                stopColor={theme === "dark" ? "#ef4444" : "#ef4444"}
+                stopOpacity={0.8}
+              />
+              <stop
+                offset="95%"
+                stopColor={theme === "dark" ? "#ef4444" : "#ef4444"}
                 stopOpacity={0}
               />
             </linearGradient>
@@ -151,9 +163,9 @@ const PortfolioGrowth = ({ strategy, trades, plotByTrade = false }) => {
             fontSize={14}
           />
           <Tooltip content={<CustomTooltip />} />
-          {/* {referenceLines} */}
+          {/* Strategy line */}
           <Area
-            type="linear"
+            type="stepAfter"
             dataKey="equity"
             name={strategy.name}
             stroke={theme === "dark" ? "#22c55e" : "#8884d8"}
@@ -161,8 +173,23 @@ const PortfolioGrowth = ({ strategy, trades, plotByTrade = false }) => {
             fill="url(#colorUv)"
             strokeWidth={2}
             dot={false}
+            connectNulls={true}
           />
-        </AreaChart>
+          {/* Benchmark line */}
+          {benchmarkData && (
+            <Area
+              type="linear"
+              dataKey="benchmarkEquity"
+              name={strategy.benchmark}
+              stroke={theme === "dark" ? "#ef4444" : "#ef4444"}
+              fillOpacity={0.5}
+              fill="url(#colorBenchmark)"
+              strokeWidth={2}
+              dot={false}
+              connectNulls={true}
+            />
+          )}
+        </ComposedChart>
       </ResponsiveContainer>
     </div>
   );

@@ -398,6 +398,149 @@ export const calculateTradingMetrics = (
   };
 };
 
+export const calculateBenchmarkMetrics = (benchmarkPrices, trades, initialCapital) => {
+  // Early return if no data
+  if (!benchmarkPrices?.length || !trades?.length) {
+    return null;
+  }
+
+  // Get strategy date range
+  const strategyStartDate = trades[0].exitDate.toDate();
+  const strategyEndDate = trades[trades.length - 1].exitDate.toDate();
+
+  // Filter benchmark prices to match strategy period
+  const relevantBenchmarkPrices = benchmarkPrices.filter(price => {
+    const priceDate = price.date.toDate();
+    return priceDate >= strategyStartDate && priceDate <= strategyEndDate;
+  });
+
+  if (relevantBenchmarkPrices.length === 0) {
+    return null;
+  }
+
+  // Initialize metrics
+  let balance = initialCapital;
+  let peakBalance = initialCapital;
+  let maxDrawdown = 0;
+  let maxDrawdownAmount = 0;
+  let maxDrawdownDate = null;
+  let monthlyReturns = [];
+  let yearlyReturns = [];
+  let currentMonthProfit = 0;
+  let currentYearProfit = 0;
+  let currentMonthStartBalance = initialCapital;
+  let currentYearStartBalance = initialCapital;
+  let currentMonth = strategyStartDate.getMonth();
+  let currentYear = strategyStartDate.getFullYear();
+
+  // Calculate trading period
+  const tradingPeriod = strategyEndDate - strategyStartDate;
+  const totalTradingDays = Math.ceil(tradingPeriod / (1000 * 60 * 60 * 24));
+  const totalTradingYears = totalTradingDays / 365;
+
+  // Calculate metrics for each price point
+  relevantBenchmarkPrices.forEach((price, index) => {
+    const priceDate = price.date.toDate();
+    const dailyReturn = price.return;
+    const profit = balance * dailyReturn;
+    
+    balance += profit;
+
+    // Update drawdown
+    if (balance > peakBalance) {
+      peakBalance = balance;
+    } else {
+      const currentDrawdown = peakBalance - balance;
+      if (currentDrawdown > maxDrawdown) {
+        maxDrawdown = currentDrawdown;
+        maxDrawdownAmount = currentDrawdown;
+        maxDrawdownDate = priceDate;
+      }
+    }
+
+    // Calculate monthly and yearly returns
+    const priceMonth = priceDate.getMonth();
+    const priceYear = priceDate.getFullYear();
+
+    if (priceMonth !== currentMonth || priceYear !== currentYear) {
+      // Add monthly return
+      monthlyReturns.push({
+        date: new Date(currentYear, currentMonth),
+        return: currentMonthProfit / currentMonthStartBalance,
+      });
+      currentMonthProfit = profit;
+      currentMonthStartBalance = balance - profit;
+
+      // Add yearly return if year changes
+      if (priceYear !== currentYear) {
+        yearlyReturns.push({
+          year: currentYear,
+          return: currentYearProfit / currentYearStartBalance,
+        });
+        currentYearProfit = profit;
+        currentYearStartBalance = balance - profit;
+        currentYear = priceYear;
+      }
+
+      currentMonth = priceMonth;
+    } else {
+      currentMonthProfit += profit;
+      currentYearProfit += profit;
+    }
+  });
+
+  // Add final month and year returns
+  monthlyReturns.push({
+    date: new Date(currentYear, currentMonth),
+    return: currentMonthProfit / currentMonthStartBalance,
+  });
+  yearlyReturns.push({
+    year: currentYear,
+    return: currentYearProfit / currentYearStartBalance,
+  });
+
+  // Calculate return metrics
+  const totalReturn = ((balance - initialCapital) / initialCapital) * 100;
+  const cagr = (Math.pow(balance / initialCapital, 1 / totalTradingYears) - 1) * 100;
+  
+  // Calculate standard deviation
+  const monthlyReturnValues = monthlyReturns.map(month => month.return);
+  const stdDevMonthly = calculateStandardDeviation2(monthlyReturnValues);
+  const stdDevAnnualized = stdDevMonthly * Math.sqrt(12);
+
+  // Calculate downside deviation
+  const downsideReturns = monthlyReturns.filter(month => month.return < 0);
+  const downsideDeviation = calculateStandardDeviation2(downsideReturns.map(month => month.return));
+
+  // Calculate Sharpe and Sortino ratios
+  const riskFreeRate = 0.02; // Assuming 2% risk-free rate
+  const excessReturn = cagr / 100 - riskFreeRate;
+  const sharpeRatio = excessReturn / stdDevAnnualized;
+  const sortinoRatio = excessReturn / (downsideDeviation * Math.sqrt(12));
+
+  // Calculate positive periods
+  const positivePeriods = monthlyReturns.filter(month => month.return > 0).length;
+  const positivePeriodsPct = (positivePeriods / monthlyReturns.length) * 100;
+
+  return {
+    initialCapital,
+    endBalance: balance,
+    totalReturn,
+    annualizedReturn: cagr,
+    maxDrawdownPct: (maxDrawdown / peakBalance) * 100,
+    maxDrawdownAmount,
+    maxDrawdownDate,
+    standardDeviation: stdDevAnnualized,
+    sharpeRatio,
+    sortinoRatio,
+    bestYear: Math.max(...yearlyReturns.map(year => year.return)) * 100,
+    worstYear: Math.min(...yearlyReturns.map(year => year.return)) * 100,
+    positivePeriods: `${positivePeriods} out of ${monthlyReturns.length} months (${positivePeriodsPct.toFixed(2)}%)`,
+    monthlyReturns,
+    yearlyReturns,
+  };
+};
+
 // New function to combine trades from multiple strategies
 export const combineStrategyTrades = (strategies, allocations) => {
   let combinedTrades = [];
@@ -522,6 +665,18 @@ function calculateStandardDeviation(arr) {
     arr.map((x) => Math.pow(x - mean, 2)).reduce((a, b) => a + b, 0) / n
   );
 }
+
+// Helper function for standard deviation
+const calculateStandardDeviation2 = (values) => {
+  const n = values.length;
+  if (n < 2) return 0;
+
+  const mean = values.reduce((sum, value) => sum + value, 0) / n;
+  const squaredDiffs = values.map(value => Math.pow(value - mean, 2));
+  const variance = squaredDiffs.reduce((sum, value) => sum + value, 0) / (n - 1);
+  
+  return Math.sqrt(variance);
+};
 
 function calculateSkewness(arr) {
   if (arr.length === 0) return 0;

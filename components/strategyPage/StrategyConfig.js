@@ -1,3 +1,4 @@
+"use client";
 import React, { useState } from "react";
 import {
   Accordion,
@@ -18,39 +19,123 @@ import {
   SelectContent,
   SelectGroup,
   SelectItem,
-  SelectLabel,
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
 import { Button } from "../ui/button";
-import { calculateTradingMetrics } from "../processing/dataProcessing";
-import { useFirestore } from "reactfire";
-import { doc, Timestamp, updateDoc, writeBatch } from "firebase/firestore";
+import {
+  calculateTradingMetrics,
+  calculateBenchmarkMetrics,
+} from "../processing/dataProcessing";
+import { useFirestore, useFirestoreCollectionData } from "reactfire";
+import {
+  doc,
+  Timestamp,
+  updateDoc,
+  collection,
+  query,
+  getDocs,
+  orderBy,
+  where,
+} from "firebase/firestore";
+import { toast } from "@/components/ui/use-toast";
 
 const StrategyConfig = ({ strategy, trades }) => {
-  const [initialCapital, setInitialCapital] = useState(parseFloat(strategy.metrics.initialCapital));
-  const [selectedBenchmark, setSelectedBenchmark] = useState(strategy.benchmark);
+  const [initialCapital, setInitialCapital] = useState(
+    parseFloat(strategy.metrics.initialCapital)
+  );
+  const [selectedBenchmark, setSelectedBenchmark] = useState(
+    strategy.benchmark || "none"
+  );
+  const [isProcessing, setIsProcessing] = useState(false);
   const firestore = useFirestore();
 
-  const reprocessData = async () => {
+  // Query available benchmarks
+  const benchmarksRef = collection(firestore, "benchmarks");
+  const { data: benchmarksData, status } = useFirestoreCollectionData(
+    benchmarksRef,
+    {
+      idField: "id",
+    }
+  );
 
-    // Re-process metrics data
-    const metrics = calculateTradingMetrics(trades, initialCapital);
-
+  const fetchBenchmarkData = async (benchmarkSymbol) => {
     try {
+      // Get prices subcollection for the benchmark
+      const pricesRef = collection(
+        firestore,
+        "benchmarks",
+        benchmarkSymbol,
+        "prices"
+      );
+
+      // Create query ordered by date
+      const q = query(pricesRef, orderBy("date"));
+
+      // Get all prices
+      const querySnapshot = await getDocs(q);
+
+      // Convert to array of price data
+      const prices = querySnapshot.docs.map((doc) => ({
+        ...doc.data(),
+        id: doc.id,
+      }));
+
+      console.log(
+        `Fetched ${prices.length} price points for ${benchmarkSymbol}`
+      );
+      return prices;
+    } catch (error) {
+      console.error("Error fetching benchmark data:", error);
+      throw error;
+    }
+  };
+
+  const reprocessData = async () => {
+    setIsProcessing(true);
+    try {
+      // Calculate strategy metrics
+      const metrics = calculateTradingMetrics(trades, initialCapital);
+
+      let benchmarkMetrics = null;
+
+      if (selectedBenchmark !== "none") {
+        // Fetch benchmark prices
+        const benchmarkPrices = await fetchBenchmarkData(selectedBenchmark);
+        console.log("Fetched benchmark prices:", benchmarkPrices);
+
+        // Calculate benchmark metrics for same period as strategy
+        benchmarkMetrics = calculateBenchmarkMetrics(
+          benchmarkPrices,
+          trades,
+          initialCapital
+        );
+        console.log("Calculated benchmark metrics:", benchmarkMetrics);
+      }
+
       // Get the document reference for the existing strategy
       const strategyDocRef = doc(firestore, "strategies", strategy.NO_ID_FIELD);
-    
-      // Update the existing strategy document
+
+      // Update strategy document
       await updateDoc(strategyDocRef, {
         metrics: metrics,
         benchmark: selectedBenchmark,
-        updatedAt: Timestamp.now(), // Track when the update occurred
+        benchmarkMetrics: benchmarkMetrics,
+        updatedAt: Timestamp.now(),
       });
 
-      console.log("Strategy updated successfully");
+      toast({
+        title: "Strategy updated successfully",
+      });
     } catch (error) {
-      console.error("Error updating strategy: ", error);
+      console.error("Error updating strategy:", error);
+      toast({
+        title: "Strategy updated successfully",
+        description: error.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsProcessing(false);
     }
   };
 
@@ -76,7 +161,9 @@ const StrategyConfig = ({ strategy, trades }) => {
               </div>
               <Input
                 value={initialCapital}
-                onChange={(e) => setInitialCapital(parseFloat(e.target.value) || 0)} // Converts to number, defaults to 0 if empty
+                onChange={(e) =>
+                  setInitialCapital(parseFloat(e.target.value) || 0)
+                }
                 placeholder="Amount..."
                 type="number"
                 className=""
@@ -91,36 +178,31 @@ const StrategyConfig = ({ strategy, trades }) => {
                       <IoInformationCircle size={15} className="" />
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>
-                        Select benchmark index or an imported benchmark series
-                      </p>
+                      <p>Select benchmark index to compare against</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
               </div>
-              <Select value={selectedBenchmark} onValueChange={(value) => setSelectedBenchmark(value)}>
-                <SelectTrigger className="" defaultValue="none">
+              <Select
+                value={selectedBenchmark}
+                onValueChange={(value) => setSelectedBenchmark(value)}
+              >
+                <SelectTrigger className="">
                   <SelectValue placeholder="Select a benchmark" />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectGroup>
                     <SelectItem value="none">None</SelectItem>
-                    <SelectItem value="ticker">Specify Ticker...</SelectItem>
-                    <SelectItem value="blueberry">
-                      Import Benchmark...
-                    </SelectItem>
-                    <SelectLabel className="mt-1">
-                      Benchmark Portfolio
-                    </SelectLabel>
-                    <SelectItem className="ml-5" value="spy">
-                      SPY
-                    </SelectItem>
-                    <SelectItem className="ml-5" value="v500index">
-                      Vanguard 500 Index Investor
-                    </SelectItem>
-                    <SelectItem className="ml-5" value="vbindex">
-                      Vanguard Balanced Index Inv
-                    </SelectItem>
+                    {status === "success" &&
+                      benchmarksData.map((benchmark) => (
+                        <SelectItem
+                          key={benchmark.id}
+                          value={benchmark.id}
+                          className="ml-5"
+                        >
+                          {benchmark.name || benchmark.symbol}
+                        </SelectItem>
+                      ))}
                   </SelectGroup>
                 </SelectContent>
               </Select>

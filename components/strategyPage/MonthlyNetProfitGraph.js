@@ -31,8 +31,6 @@ const MonthlyNetProfitGraph = ({ strategy, trades }) => {
     }));
   }, [trades]);
 
-  console.log(data);
-
   const CustomTooltip = ({ active, payload, label }) => {
     if (active && payload && payload.length) {
       const value = payload[0].payload.netProfit;
