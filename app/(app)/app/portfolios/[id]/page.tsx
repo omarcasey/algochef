@@ -347,10 +347,9 @@ const PortfolioPage = () => {
             >
               <Summary strategy={portfolio} />
               <PortfolioGrowth
-                strategy={portfolio}
-                trades={trades}
-                plotByTrade={plotByTrade}
-              />
+                  strategy={portfolio}
+                  trades={trades}
+                  plotByTrade={plotByTrade} benchmarkData={undefined}              />
               <Drawdowns
                 strategy={portfolio}
                 trades={trades}
