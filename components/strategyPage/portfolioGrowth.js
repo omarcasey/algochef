@@ -165,7 +165,7 @@ const PortfolioGrowth = ({ strategy, trades, plotByTrade = false, benchmarkData 
           <Tooltip content={<CustomTooltip />} />
           {/* Strategy line */}
           <Area
-            type="stepAfter"
+            type="monotone"
             dataKey="equity"
             name={strategy.name}
             stroke={theme === "dark" ? "#22c55e" : "#8884d8"}

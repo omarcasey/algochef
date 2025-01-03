@@ -84,7 +84,7 @@ const Sidebar = () => {
               width={1920}
               className="w-8 h-8 rounded-lg mr-2 inline"
             />
-            <p className="text-xl font-bold">TradeTrackr</p>
+            <p className="text-xl font-bold">AlgoChef</p>
           </Link>
           <Button variant="ghost" onClick={toggleSidebar}>
             <GoSidebarCollapse
@@ -142,7 +142,7 @@ const Sidebar = () => {
               Portfolio Builder
             </p>
           </Button>
-          <Button
+          {/* <Button
             variant={"ghost"}
             className="w-full flex items-center justify-start"
             onClick={() => router.push("/app/signals")}
@@ -151,8 +151,8 @@ const Sidebar = () => {
             <p className={`${isExpanded ? "" : "hidden"} font-normal`}>
               Signals
             </p>
-          </Button>
-          <Button
+          </Button> */}
+          {/* <Button
             variant={"ghost"}
             className="w-full flex items-center justify-start"
             onClick={() => router.push("/app/community")}
@@ -161,7 +161,7 @@ const Sidebar = () => {
             <p className={`${isExpanded ? "" : "hidden"} font-normal`}>
               Community
             </p>
-          </Button>
+          </Button> */}
         </div>
         <p
           className={`ml-7 mb-4 text-gray-400 text-xs uppercase ${
