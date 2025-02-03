@@ -10,8 +10,8 @@ export const NavBar: FC = () => {
   return (
     <>
       <div className="animate-in fade-in w-full dark:bg-black">
-        <nav className="container px-6 md:px-8 py-4">
-          <div className="flex items-center justify-between">
+      <nav className="container px-6 md:px-8 py-4">
+        <div className="flex items-center justify-between">
             <Link href="/" className="hover:opacity-80 transition-opacity">
               <div className="flex items-center">
                 <Image
@@ -23,30 +23,30 @@ export const NavBar: FC = () => {
                 />{" "}
                 <span className="text-2xl font-semibold tracking-tighter text-foreground mr-6">
                   AlgoChef
-                </span>
+              </span>
               </div>
             </Link>
-            <div className="hidden md:flex justify-between items-center">
+          <div className="hidden md:flex justify-between items-center">
               <div className="text-lg text-gray-300 space-x-10">
                 <Link href="#1" className="transition-all hover:text-white">
                   About
-                </Link>
+              </Link>
                 <Link href="#2" className="transition-all hover:text-white">
                   Pricing
-                </Link>
+              </Link>
                 <Link href="#3" className="transition-all hover:text-white">
                   FAQ
-                </Link>
-              </div>
+              </Link>
+          </div>
             </div>
             <div className="hidden md:flex items-center space-x-4">
               <NavbarUserLinks />
             </div>
             <div className="grow md:hidden flex justify-end">
-              <NavbarMobile />
+            <NavbarMobile />
             </div>
-          </div>
-        </nav>
+        </div>
+      </nav>
       </div>
     </>
   );
