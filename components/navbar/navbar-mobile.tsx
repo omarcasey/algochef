@@ -13,6 +13,21 @@ import {
 import { MenuIcon } from "lucide-react";
 
 export const NavbarMobile = () => {
+  const scrollToSection = (id: string) => {
+    const element = document.getElementById(id);
+    if (element) {
+      // Offset for fixed navbar height
+      const navbarOffset = 80;
+      const elementPosition = element.getBoundingClientRect().top;
+      const offsetPosition = elementPosition + window.pageYOffset - navbarOffset;
+      
+      window.scrollTo({
+        top: offsetPosition,
+        behavior: "smooth"
+      });
+    }
+  };
+
   return (
     <>
       <NavigationMenu>
@@ -22,24 +37,30 @@ export const NavbarMobile = () => {
               <MenuIcon />
             </NavigationMenuTrigger>
             <NavigationMenuContent className="flex flex-col p-1">
-              <NavigationMenuLink
-                href="#1"
+              <button
+                onClick={() => scrollToSection('features')}
                 className={buttonVariants({ variant: "link" })}
               >
-                Item 1
-              </NavigationMenuLink>
-              <NavigationMenuLink
-                href="#2"
+                Features
+              </button>
+              <button
+                onClick={() => scrollToSection('testimonials')}
                 className={buttonVariants({ variant: "link" })}
               >
-                Item 2
-              </NavigationMenuLink>
-              <NavigationMenuLink
-                href="#3"
+                Testimonials
+              </button>
+              <button
+                onClick={() => scrollToSection('pricing')}
                 className={buttonVariants({ variant: "link" })}
               >
-                Item 3
-              </NavigationMenuLink>
+                Pricing
+              </button>
+              <button
+                onClick={() => scrollToSection('faq')}
+                className={buttonVariants({ variant: "link" })}
+              >
+                FAQ
+              </button>
               <div className="flex flex-col mb-0.5">
                 <NavbarUserLinks />
               </div>

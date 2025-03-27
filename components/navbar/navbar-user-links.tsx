@@ -6,14 +6,12 @@ import { Button, buttonVariants } from "@/components/ui/button";
 import Link from "next/link";
 import { FC } from "react";
 import { useUser } from "reactfire";
-import { ThemeSwitcher } from "./theme-switcher";
 
 export const NavbarUserLinks: FC = () => {
   const { data, hasEmitted } = useUser();
 
   return (
     <>
-      <ThemeSwitcher />
       {hasEmitted && data ? (
         <>
           {/* <Link

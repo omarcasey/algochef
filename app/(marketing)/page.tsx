@@ -15,23 +15,44 @@ import Feature2 from "@/components/marketing/Feature2";
 import Feature from "@/components/marketing/Feature";
 import Steps from "@/components/marketing/Steps";
 import Pricing from "@/components/marketing/Pricing";
+import Testimonials from "@/components/marketing/Testimonials";
+import FAQ from "@/components/marketing/FAQ";
 import { NavBar } from "@/components/navbar/navbar";
 import { Footer } from "@/components/footer";
 
 export default function Home() {
   return (
-    <div className="flex flex-col grow h-full overflow-hidden">
-      <div className="grow flex flex-col items-center justify-evenly dark:bg-black">
-        <section className="space-y-6">
-          <Hero />
-          <Feature2 />
-          <Feature />
-          <Steps />
-          <Pricing />
-          {/* <Testimonial />
-          <FAQ /> */}
-        </section>
-      </div>
+    <div className="min-h-screen bg-black">
+      {/* Hero Section */}
+      <section>
+        <Hero />
+      </section>
+
+      {/* Features Section */}
+      <section>
+        <Feature2 />
+        <Feature />
+      </section>
+
+      {/* Steps Section */}
+      <section>
+        <Steps />
+      </section>
+
+      {/* Testimonials Section */}
+      <section>
+        <Testimonials />
+      </section>
+
+      {/* Pricing Section */}
+      <section>
+        <Pricing />
+      </section>
+
+      {/* FAQ Section */}
+      <section>
+        <FAQ />
+      </section>
     </div>
   );
 }

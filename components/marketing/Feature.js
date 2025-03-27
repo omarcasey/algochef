@@ -2,7 +2,7 @@
 import Image from 'next/image'
 import React from 'react'
 import { motion } from 'framer-motion'
-import { FaBell, FaChartLine, FaRobot } from 'react-icons/fa'
+import { FaBell, FaChartLine, FaRobot, FaShieldAlt, FaChartBar, FaLightbulb } from 'react-icons/fa'
 
 const Feature = () => {
     const containerVariants = {
@@ -49,18 +49,98 @@ const Feature = () => {
             icon: <FaRobot className="w-5 h-5 text-cyan-500" />,
             title: "AI-Powered Insights",
             description: "Leverage machine learning for strategy optimization and risk management."
+        },
+        {
+            icon: <FaShieldAlt className="w-5 h-5 text-purple-500" />,
+            title: "Risk Management",
+            description: "Advanced risk assessment and position sizing recommendations."
+        },
+        {
+            icon: <FaChartBar className="w-5 h-5 text-cyan-500" />,
+            title: "Market Analysis",
+            description: "Comprehensive market analysis tools and indicators."
+        },
+        {
+            icon: <FaLightbulb className="w-5 h-5 text-purple-500" />,
+            title: "Strategy Ideas",
+            description: "Discover and explore new trading strategies from our community."
         }
     ];
 
     return (
         <motion.section 
+            id="features"
             initial="hidden"
             whileInView="visible"
             viewport={{ once: true, margin: "-100px" }}
             variants={containerVariants}
-            className="py-24 overflow-hidden"
+            className="relative py-24 overflow-hidden"
         >
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            {/* Background decorative elements */}
+            <div className="absolute inset-0 overflow-hidden">
+                <div className="absolute w-[500px] h-[500px] -top-40 -left-40 bg-cyan-500/30 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob"></div>
+                <div className="absolute w-[500px] h-[500px] -bottom-40 -right-40 bg-purple-500/30 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-blob animation-delay-2000"></div>
+            </div>
+
+            <style jsx global>{`
+                .feature-card {
+                    position: relative;
+                    border-radius: 0.75rem;
+                    background: rgba(17, 17, 17, 0.5);
+                    border: 1px solid rgba(255, 255, 255, 0.1);
+                    transition: all 0.3s ease;
+                }
+
+                .feature-card::before,
+                .feature-card::after {
+                    content: '';
+                    position: absolute;
+                    inset: -1px;
+                    border-radius: inherit;
+                    padding: 1px;
+                    background: linear-gradient(
+                        90deg,
+                        transparent 0%,
+                        rgba(6, 182, 212, 0.7) 2%,
+                        transparent 4%
+                    );
+                    -webkit-mask: linear-gradient(#000, #000) content-box, linear-gradient(#000, #000);
+                    -webkit-mask-composite: xor;
+                    mask-composite: exclude;
+                    opacity: 0;
+                    transition: opacity 0.3s ease;
+                }
+
+                .feature-card::after {
+                    background: linear-gradient(
+                        90deg,
+                        transparent 96%,
+                        rgba(139, 92, 246, 0.7) 98%,
+                        transparent 100%
+                    );
+                }
+
+                .feature-card:hover::before {
+                    opacity: 1;
+                    animation: rotate 3s linear infinite;
+                }
+
+                .feature-card:hover::after {
+                    opacity: 1;
+                    animation: rotate 3s linear infinite reverse;
+                }
+
+                @keyframes rotate {
+                    from {
+                        transform: rotate(0deg);
+                    }
+                    to {
+                        transform: rotate(360deg);
+                    }
+                }
+            `}</style>
+
+            <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 <div className="lg:grid lg:grid-cols-12 lg:gap-16 items-center">
                     {/* Left Column - Content */}
                     <div className="col-span-6 mb-12 lg:mb-0">
@@ -84,29 +164,31 @@ const Feature = () => {
 
                         <motion.p 
                             variants={itemVariants}
-                            className="mt-6 text-lg text-gray-400"
+                            className="mt-6 text-lg text-gray-400 max-w-2xl"
                         >
                             Stay ahead of the market with our advanced signal system. Get real-time notifications, analyze performance metrics, and make data-driven decisions to optimize your trading strategies.
                         </motion.p>
 
                         {/* Feature Cards */}
-                        <div className="mt-12 space-y-4">
+                        <div className="mt-12 grid grid-cols-1 md:grid-cols-2 gap-4">
                             {features.map((feature, index) => (
                                 <motion.div
                                     key={index}
                                     variants={itemVariants}
-                                    className="flex items-start space-x-4 p-4 rounded-xl hover:bg-gray-800/30 transition-colors duration-200"
+                                    className="feature-card group p-4"
                                 >
-                                    <div className="flex-shrink-0 p-3 rounded-lg bg-gray-800">
-                                        {feature.icon}
-                                    </div>
-                                    <div>
-                                        <h3 className="font-semibold text-white">
-                                            {feature.title}
-                                        </h3>
-                                        <p className="mt-1 text-sm text-gray-400">
-                                            {feature.description}
-                                        </p>
+                                    <div className="relative flex items-start space-x-4">
+                                        <div className="p-2 rounded-lg bg-gray-800">
+                                            {feature.icon}
+                                        </div>
+                                        <div>
+                                            <h3 className="font-semibold text-white">
+                                                {feature.title}
+                                            </h3>
+                                            <p className="mt-1 text-sm text-gray-400">
+                                                {feature.description}
+                                            </p>
+                                        </div>
                                     </div>
                                 </motion.div>
                             ))}
@@ -119,10 +201,6 @@ const Feature = () => {
                             variants={imageVariants}
                             className="relative"
                         >
-                            {/* Background gradients */}
-                            <div className="absolute -top-40 -right-40 w-80 h-80 bg-purple-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob"></div>
-                            <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-cyan-500 rounded-full mix-blend-multiply filter blur-3xl opacity-20 animate-blob animation-delay-2000"></div>
-
                             {/* Main image stack */}
                             <div className="relative">
                                 {/* First image */}

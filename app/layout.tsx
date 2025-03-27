@@ -10,9 +10,9 @@ import { ThemeProvider } from "@/components/App/theme-provider";
 const font = Work_Sans({ subsets: ["latin"] });
 
 export const metadata: Metadata = {
-  title: "TradeTrackr",
+  title: "AlgoChef",
   description:
-    "Venefish is a Vercel Next.JS Firebase Shadcn/ui Tailwind Boilerplate project to help you get started with your next project.",
+    "AlgoChef is a platform that helps you create and manage your own trading algorithms.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
