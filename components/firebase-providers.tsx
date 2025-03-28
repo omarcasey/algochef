@@ -10,9 +10,11 @@ import {
 } from "reactfire";
 import { getAuth } from "firebase/auth";
 import { getFirestore } from "firebase/firestore";
-import { isBrowser } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import { getAnalytics } from "firebase/analytics";
 import { FirebaseOptions } from "firebase/app";
+
+const isBrowser = () => typeof window !== "undefined";
 
 const config: FirebaseOptions = {
   apiKey: "AIzaSyAFX6l-n9aThfNSpyIP54m6v93TKeBYkaU",
