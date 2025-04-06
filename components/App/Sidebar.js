@@ -77,7 +77,7 @@ const Sidebar = () => {
 
   return (
     <div
-      className={`dark:bg-black/70 backdrop-blur-sm py-6 bg-white/95 shadow-md dark:shadow-gray-950/10 border-r border-gray-100 dark:border-gray-800/30 lg:flex flex-col ${
+      className={`dark:bg-black/70 backdrop-blur-sm py-6 bg-white/95 shadow-md dark:shadow-gray-950/10 border-r border-gray-100 dark:border-gray-800/90 lg:flex flex-col ${
         isExpanded ? "w-[17.5rem] px-5" : "w-16 px-2"
       } hidden transition-all duration-300 ease-in-out h-full relative z-10`}
     >

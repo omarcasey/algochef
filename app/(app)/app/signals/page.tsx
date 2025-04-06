@@ -110,56 +110,68 @@ const TradingSignalsPage: React.FC = () => {
         </p>
       </div>
 
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <div className="flex flex-col gap-3">
         {strategies.map((strategy) => (
-          <Card key={strategy.id} className="overflow-hidden border border-gray-200 dark:border-gray-800 transition-all hover:shadow-md dark:hover:shadow-gray-800/30 group">
-            <CardHeader className={`bg-gradient-to-r ${strategy.color} p-6 relative`}>
-              <div className="absolute inset-0 bg-black/10"></div>
-              <div className="relative">
-                <div className="bg-white/20 dark:bg-white/20 rounded-full p-2 w-10 h-10 flex items-center justify-center mb-3 backdrop-blur-sm">
-                  <StrategyIcon name={strategy.id as any} color="white" size={20} />
-                </div>
-                <CardTitle className="text-white text-xl">{strategy.name}</CardTitle>
-                <CardDescription className="text-white/90 mt-2">
-                  {strategy.description}
-                </CardDescription>
-              </div>
-            </CardHeader>
-            <CardContent className="p-6">
-              <div className="flex flex-wrap gap-2 mb-4">
-                {strategy.badges.map((badge) => (
-                  <Badge key={badge} variant="secondary" className="font-normal">
-                    {badge}
-                  </Badge>
-                ))}
-              </div>
-              <ul className="space-y-2">
-                {strategy.keyPoints.map((point, index) => (
-                  <li key={index} className="flex items-start gap-2 text-sm">
-                    <div className="h-5 w-5 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center flex-shrink-0 mt-0.5">
-                      <span className="h-1.5 w-1.5 rounded-full bg-gray-500 dark:bg-gray-400"></span>
+          <Link href={`/app/signals/${strategy.id}`} key={strategy.id} className="block w-full">
+            <Card 
+              className="overflow-hidden border border-gray-200 dark:border-gray-800 transition-all hover:shadow-md dark:hover:shadow-gray-800/30 group hover:border-blue-400 dark:hover:border-blue-600 cursor-pointer"
+            >
+              <div className="flex flex-col md:flex-row">
+                {/* Left side with gradient background and title */}
+                <div 
+                  className={`bg-gradient-to-r ${strategy.color} p-5 relative md:w-1/5 flex flex-col justify-center`}
+                >
+                  <div className="absolute inset-0 bg-black/10"></div>
+                  <div className="relative">
+                    <div className="bg-white/20 dark:bg-white/20 rounded-full p-1.5 w-8 h-8 flex items-center justify-center mb-2 backdrop-blur-sm">
+                      <StrategyIcon name={strategy.id as any} color="white" size={16} />
                     </div>
-                    {point}
-                  </li>
-                ))}
-              </ul>
-            </CardContent>
-            <CardFooter className="px-6 pb-6 pt-0">
-              <Link href={`/app/signals/${strategy.id}`} className="w-full">
-                <Button variant="ghost" className="w-full justify-between group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                  <span>Learn more</span>
-                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                </Button>
-              </Link>
-            </CardFooter>
-          </Card>
+                    <CardTitle className="text-white text-lg">{strategy.name}</CardTitle>
+                    <div className="flex flex-wrap gap-1.5 mt-2">
+                      {strategy.badges.map((badge) => (
+                        <Badge key={badge} variant="secondary" className="text-xs font-normal bg-white/20 text-white hover:bg-white/30">
+                          {badge}
+                        </Badge>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Right side with content */}
+                <div className="md:w-4/5 flex flex-col md:flex-row md:items-center">
+                  <CardContent className="p-4 flex-grow">
+                    <div className="md:flex md:gap-6">
+                      <p className="text-sm text-muted-foreground mb-3 md:mb-0 md:w-1/3">
+                        {strategy.description}
+                      </p>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-x-4 gap-y-1.5 md:w-2/3">
+                        {strategy.keyPoints.map((point, index) => (
+                          <div key={index} className="flex items-start gap-2 text-xs">
+                            <div className="h-4 w-4 rounded-full bg-gray-100 dark:bg-gray-800 flex items-center justify-center flex-shrink-0 mt-0.5">
+                              <span className="h-1 w-1 rounded-full bg-gray-500 dark:bg-gray-400"></span>
+                            </div>
+                            {point}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </CardContent>
+                  <div className="flex items-center pr-4 pl-4 pb-4 md:p-0 md:pr-6">
+                    <div className="flex items-center justify-center w-6 h-6 rounded-full bg-gray-100 dark:bg-gray-800 group-hover:bg-blue-100 dark:group-hover:bg-blue-900 transition-colors">
+                      <ArrowRight className="h-3 w-3 text-gray-500 dark:text-gray-400 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-transform group-hover:translate-x-0.5" />
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </Card>
+          </Link>
         ))}
       </div>
 
-      <div className="mt-12 p-8 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-100 dark:border-blue-900/20">
+      <div className="mt-10 p-6 rounded-xl bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border border-blue-100 dark:border-blue-900/20">
         <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
-            <h2 className="text-xl font-semibold mb-2">Ready to implement these strategies?</h2>
+            <h2 className="text-xl font-semibold mb-1">Ready to implement these strategies?</h2>
             <p className="text-sm text-muted-foreground max-w-2xl">
               AlgoChef can help you build, test, and implement these strategies with just a few clicks.
               Start building your portfolio today.
