@@ -6,7 +6,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
 } from "recharts";
 import { Label } from "../ui/label";
@@ -22,7 +21,6 @@ import {
 } from "../ui/table";
 import numeral from "numeral";
 
-// ... (CustomTooltip component remains the same)
 const CustomTooltip = ({ active, payload, label }) => {
   if (active && payload && payload.length) {
     return (
@@ -60,11 +58,8 @@ const ResultsTable = ({ results, initialCapital }) => {
       const result = results[index];
       const netProfit = result.mean;
       const rateOfReturn = (netProfit / initialCapital) * 100;
-
-      // Calculate the maximum drawdown across all simulations
       const maxDrawdown = Math.max(...result.drawdowns);
       const maxDrawdownPercent = (maxDrawdown / initialCapital) * 100;
-
       const returnDDRatio =
         maxDrawdownPercent !== 0
           ? Math.abs(rateOfReturn / maxDrawdownPercent)
@@ -73,7 +68,6 @@ const ResultsTable = ({ results, initialCapital }) => {
         Math.abs(result.totalLoss) !== 0
           ? result.totalGain / Math.abs(result.totalLoss)
           : Infinity;
-
       return {
         confidence: level,
         netProfit: netProfit.toFixed(2),
@@ -88,10 +82,8 @@ const ResultsTable = ({ results, initialCapital }) => {
 
   return (
     <div className="mt-4 overflow-x-auto">
-      <p className="font-medium mb-4">
-        Key Results at Select Confidence Levels
-      </p>
-      <Table className="">
+      <h3 className="font-semibold text-lg mb-2">Key Results at Select Confidence Levels</h3>
+      <Table className="bg-white rounded-lg border">
         <TableHeader>
           <TableRow>
             <TableHead>Confidence %</TableHead>
@@ -124,32 +116,26 @@ const ResultsTable = ({ results, initialCapital }) => {
 const DetailedResults = ({ results, confidenceLevel, initialCapital }) => {
   const detailedData = useMemo(() => {
     if (!results) return null;
-
     const index = Math.floor((confidenceLevel / 100) * (results.length - 1));
     const result = results[index];
     const netProfit = result.mean;
     const rateOfReturn = (netProfit / initialCapital) * 100;
     const maxDrawdown = Math.max(...result.drawdowns);
     const maxDrawdownPercent = (maxDrawdown / initialCapital) * 100;
-
     const winningTrades = results.filter((r) => r.mean > 0);
     const losingTrades = results.filter((r) => r.mean <= 0);
-
     const avgWinningTrade =
       winningTrades.reduce((sum, r) => sum + r.mean, 0) / winningTrades.length;
     const avgLosingTrade =
       losingTrades.reduce((sum, r) => sum + r.mean, 0) / losingTrades.length;
-
     const largestWinningTrade = Math.max(...winningTrades.map((r) => r.mean));
     const largestLosingTrade = Math.min(...losingTrades.map((r) => r.mean));
-
     const avgTrade =
       results.reduce((sum, r) => sum + r.mean, 0) / results.length;
     const tradeStdDev = Math.sqrt(
       results.reduce((sum, r) => sum + Math.pow(r.mean - avgTrade, 2), 0) /
         results.length
     );
-
     return {
       totalNetProfit: netProfit,
       returnOnStartingEquity: rateOfReturn,
@@ -173,59 +159,30 @@ const DetailedResults = ({ results, confidenceLevel, initialCapital }) => {
   if (!detailedData) return null;
 
   return (
-    <div className="mt-8">
+    <div className="mt-8 bg-gray-50 rounded-lg p-6 border">
       <h3 className="text-lg font-semibold mb-4">
         Monte Carlo Results at {confidenceLevel.toFixed(2)}% Confidence
       </h3>
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
-          <p>
-            Total Net Profit:{" "}
-            {numeral(detailedData.totalNetProfit).format("$0,0.00")}
-          </p>
-          <p>
-            Return on Starting Equity:{" "}
-            {detailedData.returnOnStartingEquity.toFixed(2)}%
-          </p>
-          <p>Profit Factor: {detailedData.profitFactor.toFixed(3)}</p>
-          <p>
-            Percent Profitable: {detailedData.percentProfitable.toFixed(2)}%
-          </p>
-          <p>
-            Largest Winning Trade:{" "}
-            {numeral(detailedData.largestWinningTrade).format("$0,0.00")}
-          </p>
-          <p>
-            Largest Losing Trade:{" "}
-            {numeral(detailedData.largestLosingTrade).format("$0,0.00")}
-          </p>
-          <p>
-            Average Winning Trade:{" "}
-            {numeral(detailedData.avgWinningTrade).format("$0,0.00")}
-          </p>
-          <p>
-            Average Losing Trade:{" "}
-            {numeral(detailedData.avgLosingTrade).format("$0,0.00")}
-          </p>
+          <p className="mb-1 font-medium">Total Net Profit: <span className="font-mono text-blue-700">{numeral(detailedData.totalNetProfit).format("$0,0.00")}</span></p>
+          <p className="mb-1">Return on Starting Equity: <span className="font-mono">{detailedData.returnOnStartingEquity.toFixed(2)}%</span></p>
+          <p className="mb-1">Profit Factor: <span className="font-mono">{detailedData.profitFactor.toFixed(3)}</span></p>
+          <p className="mb-1">Percent Profitable: <span className="font-mono">{detailedData.percentProfitable.toFixed(2)}%</span></p>
+          <p className="mb-1">Largest Winning Trade: <span className="font-mono">{numeral(detailedData.largestWinningTrade).format("$0,0.00")}</span></p>
+          <p className="mb-1">Largest Losing Trade: <span className="font-mono">{numeral(detailedData.largestLosingTrade).format("$0,0.00")}</span></p>
+          <p className="mb-1">Average Winning Trade: <span className="font-mono">{numeral(detailedData.avgWinningTrade).format("$0,0.00")}</span></p>
+          <p className="mb-1">Average Losing Trade: <span className="font-mono">{numeral(detailedData.avgLosingTrade).format("$0,0.00")}</span></p>
         </div>
         <div>
-          <p>Max Consecutive Wins: {detailedData.maxConsecutiveWins}</p>
-          <p>Max Consecutive Losses: {detailedData.maxConsecutiveLosses}</p>
-          <p>
-            Average Trade: {numeral(detailedData.avgTrade).format("$0,0.00")}
-          </p>
-          <p>
-            Trade Standard Deviation:{" "}
-            {numeral(detailedData.tradeStdDev).format("$0,0.00")}
-          </p>
-          <p>Win/Loss Ratio: {detailedData.winLossRatio.toFixed(3)}</p>
-          <p>
-            Return/Drawdown Ratio: {detailedData.returnDrawdownRatio.toFixed(3)}
-          </p>
-          <p>
-            Max Drawdown: {numeral(detailedData.maxDrawdown).format("$0,0.00")}
-          </p>
-          <p>Max Drawdown %: {detailedData.maxDrawdownPercent.toFixed(2)}%</p>
+          <p className="mb-1">Max Consecutive Wins: <span className="font-mono">{detailedData.maxConsecutiveWins}</span></p>
+          <p className="mb-1">Max Consecutive Losses: <span className="font-mono">{detailedData.maxConsecutiveLosses}</span></p>
+          <p className="mb-1">Average Trade: <span className="font-mono">{numeral(detailedData.avgTrade).format("$0,0.00")}</span></p>
+          <p className="mb-1">Trade Standard Deviation: <span className="font-mono">{numeral(detailedData.tradeStdDev).format("$0,0.00")}</span></p>
+          <p className="mb-1">Win/Loss Ratio: <span className="font-mono">{detailedData.winLossRatio.toFixed(3)}</span></p>
+          <p className="mb-1">Return/Drawdown Ratio: <span className="font-mono">{detailedData.returnDrawdownRatio.toFixed(3)}</span></p>
+          <p className="mb-1">Max Drawdown: <span className="font-mono">{numeral(detailedData.maxDrawdown).format("$0,0.00")}</span></p>
+          <p className="mb-1">Max Drawdown %: <span className="font-mono">{detailedData.maxDrawdownPercent.toFixed(2)}%</span></p>
         </div>
       </div>
     </div>
@@ -251,6 +208,16 @@ const MonteCarloAnalysis = ({ strategy, trades }) => {
   const [confidenceLevel, setConfidenceLevel] = useState(95);
   const [results, setResults] = useState(null);
 
+  // Empty state for no trades
+  if (!trades || trades.length === 0) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[300px] p-8">
+        <div className="text-2xl font-semibold text-muted-foreground mb-2">No Trades Available</div>
+        <div className="text-md text-muted-foreground/80">This strategy does not have any trades to analyze. Please select a different strategy.</div>
+      </div>
+    );
+  }
+
   const runMonteCarloAnalysis = () => {
     const simulations = [];
     for (let i = 0; i < frequency; i++) {
@@ -260,7 +227,6 @@ const MonteCarloAnalysis = ({ strategy, trades }) => {
       let totalGain = 0;
       let totalLoss = 0;
       const drawdowns = [];
-
       const profitCurve = shuffledTrades.map((trade) => {
         cumulativeProfit += trade.netProfit;
         if (cumulativeProfit > maxProfit) {
@@ -268,16 +234,12 @@ const MonteCarloAnalysis = ({ strategy, trades }) => {
         }
         const drawdown = maxProfit - cumulativeProfit;
         drawdowns.push(drawdown);
-
         if (trade.netProfit > 0) totalGain += trade.netProfit;
         else totalLoss += trade.netProfit;
-
         return { cumulativeProfit, drawdown, totalGain, totalLoss };
       });
-
       simulations.push(profitCurve);
     }
-
     const results = simulations[0].map((_, index) => {
       const values = simulations
         .map((sim) => sim[index].cumulativeProfit)
@@ -285,7 +247,6 @@ const MonteCarloAnalysis = ({ strategy, trades }) => {
       const drawdowns = simulations.map((sim) => sim[index].drawdown);
       const totalGains = simulations.map((sim) => sim[index].totalGain);
       const totalLosses = simulations.map((sim) => sim[index].totalLoss);
-
       return {
         trade: index + 1,
         mean: values.reduce((sum, val) => sum + val, 0) / frequency,
@@ -296,29 +257,23 @@ const MonteCarloAnalysis = ({ strategy, trades }) => {
         totalLoss: totalLosses.reduce((sum, val) => sum + val, 0) / frequency,
       };
     });
-
     setResults(results);
   };
 
   const chartData = useMemo(() => {
     if (!results) return [];
-
-    // Start with a "Trade 0" point where all values are 0
     const initialPoint = {
       trade: 0,
       mean: 0,
       lower: 0,
       upper: 0,
     };
-
     const data = results.map((r) => ({
       trade: r.trade,
       mean: parseFloat(r.mean.toFixed(2)),
       lower: parseFloat(r.lower.toFixed(2)),
       upper: parseFloat(r.upper.toFixed(2)),
     }));
-
-    // Return the chart data with "Trade 0" included at the beginning
     return [initialPoint, ...data];
   }, [results]);
 
@@ -332,105 +287,121 @@ const MonteCarloAnalysis = ({ strategy, trades }) => {
   }, [chartData]);
 
   return (
-    <div className="p-4 space-y-4">
-      <div className="space-y-2">
-        <Label htmlFor="frequency">Frequency (max 10,000)</Label>
-        <Input
-          id="frequency"
-          type="number"
-          min="1"
-          max="10000"
-          value={frequency}
-          onChange={(e) =>
-            setFrequency(Math.min(10000, Math.max(1, parseInt(e.target.value))))
-          }
-        />
-      </div>
-      <div className="space-y-2">
-        <Label htmlFor="confidenceLevel">Confidence Level (%)</Label>
-        <Input
-          id="confidenceLevel"
-          type="number"
-          min="1"
-          max="99"
-          value={confidenceLevel}
-          onChange={(e) =>
-            setConfidenceLevel(
-              Math.min(99, Math.max(1, parseInt(e.target.value)))
-            )
-          }
-        />
-      </div>
-      <Button onClick={runMonteCarloAnalysis}>Run Analysis</Button>
-
-      {results && (
-        <>
-          <div className="mt-4">
-            <h3 className="text-lg font-semibold mb-2">
-              Monte Carlo Analysis Results
-            </h3>
-            <ResponsiveContainer width="100%" height={600}>
-              <LineChart
-                data={chartData}
-                margin={{ left: 20, right: 20, top: 20, bottom: 20 }}
-              >
-                <CartesianGrid vertical={false} />
-                <XAxis
-                  dataKey="trade"
-                  fontSize={12}
-                  tickMargin={5}
-                  type="number"
-                  domain={[0, chartData.length]}
-                  tickFormatter={(value) => `Trade ${value}`}
-                />
-                <YAxis
-                  domain={yDomain}
-                  tickFormatter={(value) => `$${value.toLocaleString()}`}
-                  allowDecimals={false}
-                  axisLine={false}
-                  tickMargin={15}
-                  tickLine={false}
-                  fontSize={14}
-                />
-                <Tooltip content={<CustomTooltip />} />
-                {/* <Legend /> */}
-                <Line
-                  type="monotone"
-                  dataKey="mean"
-                  name="Mean"
-                  stroke="#00a6ff"
-                  strokeWidth={2}
-                  dot={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="lower"
-                  name="Lower Bound"
-                  stroke="#C70039"
-                  strokeWidth={2}
-                  dot={false}
-                />
-                <Line
-                  type="monotone"
-                  dataKey="upper"
-                  name="Upper Bound"
-                  stroke="#0a6c00"
-                  strokeWidth={2}
-                  dot={false}
-                />
-              </LineChart>
-            </ResponsiveContainer>
+    <div className="w-full space-y-8 pb-4">
+      {/* Input Section */}
+      <div className="bg-white rounded-lg border p-6 mb-4 shadow-sm">
+        <h2 className="text-xl font-bold mb-4">Simulation Parameters</h2>
+        <div className="flex flex-col md:flex-row gap-4 items-end">
+          <div className="flex-1">
+            <Label htmlFor="frequency">Frequency (max 10,000)</Label>
+            <Input
+              id="frequency"
+              type="number"
+              min="1"
+              max="10000"
+              value={frequency}
+              onChange={(e) =>
+                setFrequency(Math.min(10000, Math.max(1, parseInt(e.target.value))))
+              }
+              className="mt-1"
+            />
           </div>
-          <ResultsTable
-            results={results}
-            initialCapital={strategy.metrics.initialCapital}
-          />
-          <DetailedResults
-            results={results}
-            confidenceLevel={confidenceLevel}
-            initialCapital={strategy.metrics.initialCapital}
-          />
-        </>
+          <div className="flex-1">
+            <Label htmlFor="confidenceLevel">Confidence Level (%)</Label>
+            <Input
+              id="confidenceLevel"
+              type="number"
+              min="1"
+              max="99"
+              value={confidenceLevel}
+              onChange={(e) =>
+                setConfidenceLevel(
+                  Math.min(99, Math.max(1, parseInt(e.target.value)))
+                )
+              }
+              className="mt-1"
+            />
+          </div>
+          <Button
+            onClick={runMonteCarloAnalysis}
+            className="h-10 px-4 text-base font-medium bg-blue-600 hover:bg-blue-700 text-white"
+          >
+            Run Analysis
+          </Button>
+        </div>
+      </div>
+
+      {/* Chart Section */}
+      {results && (
+        <div className="bg-white rounded-lg border p-6 shadow-sm">
+          <h2 className="text-xl font-bold mb-4">Monte Carlo Simulation Chart</h2>
+          <ResponsiveContainer width="100%" height={500}>
+            <LineChart
+              data={chartData}
+              margin={{ left: 20, right: 20, top: 20, bottom: 20 }}
+            >
+              <CartesianGrid vertical={false} />
+              <XAxis
+                dataKey="trade"
+                fontSize={12}
+                tickMargin={5}
+                type="number"
+                domain={[0, chartData.length]}
+                tickFormatter={(value) => `Trade ${value}`}
+              />
+              <YAxis
+                domain={yDomain}
+                tickFormatter={(value) => `$${value.toLocaleString()}`}
+                allowDecimals={false}
+                axisLine={false}
+                tickMargin={15}
+                tickLine={false}
+                fontSize={14}
+              />
+              <Tooltip content={<CustomTooltip />} />
+              <Line
+                type="monotone"
+                dataKey="mean"
+                name="Mean"
+                stroke="#00a6ff"
+                strokeWidth={2}
+                dot={false}
+              />
+              <Line
+                type="monotone"
+                dataKey="lower"
+                name="Lower Bound"
+                stroke="#C70039"
+                strokeWidth={2}
+                dot={false}
+              />
+              <Line
+                type="monotone"
+                dataKey="upper"
+                name="Upper Bound"
+                stroke="#0a6c00"
+                strokeWidth={2}
+                dot={false}
+              />
+            </LineChart>
+          </ResponsiveContainer>
+        </div>
+      )}
+
+      {/* Results Table Section */}
+      {results && (
+        <div className="bg-white rounded-lg border p-6 shadow-sm">
+          <ResultsTable results={results} initialCapital={strategy.metrics.initialCapital} />
+        </div>
+      )}
+
+      {/* Detailed Results Section */}
+      {results && (
+        <DetailedResults
+          results={results}
+          confidenceLevel={confidenceLevel}
+          initialCapital={strategy.metrics.initialCapital}
+        />
       )}
     </div>
   );

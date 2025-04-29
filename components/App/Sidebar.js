@@ -36,6 +36,7 @@ import { FaPaintBrush } from "react-icons/fa";
 import { FaCheckCircle } from "react-icons/fa";
 import { Computer, Moon, Sun } from "lucide-react";
 import { IoIosConstruct } from "react-icons/io";
+import { IoAnalyticsSharp } from "react-icons/io5";
 
 const Sidebar = () => {
   const [isExpanded, setIsExpanded] = useState(() => {
@@ -148,13 +149,21 @@ const Sidebar = () => {
               onClick={() => router.push("/app/portfolios")}
             />
             <NavItem 
+              icon={<IoAnalyticsSharp className="h-4.5 w-4.5" />} 
+              text="Monte Carlo" 
+              path="/app/monte-carlo" 
+              isActive={isActive('/app/monte-carlo')} 
+              isExpanded={isExpanded}
+              onClick={() => router.push("/app/monte-carlo")}
+            />
+            {/* <NavItem 
               icon={<MdNotificationsActive className="h-4.5 w-4.5" />} 
               text="Trading Signals" 
               path="/app/signals" 
               isActive={isActive('/app/signals')} 
               isExpanded={isExpanded}
               onClick={() => router.push("/app/signals")}
-            />
+            /> */}
             <NavItem 
               icon={<IoIosConstruct className="h-4.5 w-4.5" />} 
               text="Portfolio Builder" 

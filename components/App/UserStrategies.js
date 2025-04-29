@@ -11,6 +11,7 @@ import {
   deleteDoc,
   updateDoc,
   orderBy,
+  getDocs,
 } from "firebase/firestore";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -46,6 +47,7 @@ import { Loader2, MoreHorizontal, Plus } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import numeral from "numeral";
+import { LineChart, Line, ResponsiveContainer } from 'recharts';
 
 const UserStrategies = () => {
   const { data: user, status } = useUser();
@@ -70,16 +72,28 @@ const UserStrategies = () => {
   const [checkedItems, setCheckedItems] = useState(() => {
     // Try to load saved preferences from localStorage
     const savedPreferences = localStorage.getItem("columnPreferences");
-    return savedPreferences
-      ? JSON.parse(savedPreferences)
-      : {
-          netProfit: false,
-          maxDrawdown: false,
-          returnDrawdownRatio: false,
-          noOfTrades: false,
-          longShort: false,
-        };
+    const defaultPrefs = {
+      netProfit: false,
+      maxDrawdown: false,
+      returnDrawdownRatio: false,
+      noOfTrades: false,
+      longShort: false,
+      equityCurve: true,
+    };
+    if (savedPreferences) {
+      const parsed = JSON.parse(savedPreferences);
+      // Migration: ensure equityCurve is present
+      return { ...defaultPrefs, ...parsed };
+    }
+    return defaultPrefs;
   });
+
+  // Migration: if equityCurve is missing, add it
+  useEffect(() => {
+    if (checkedItems.equityCurve === undefined) {
+      setCheckedItems((prev) => ({ ...prev, equityCurve: true }));
+    }
+  }, [checkedItems]);
 
   // Save preferences to localStorage whenever they change
   useEffect(() => {
@@ -118,6 +132,43 @@ const UserStrategies = () => {
   // Fetch strategies using Reactfire
   const { data: strategies, status: strategiesStatus } =
     useFirestoreCollectionData(strategiesQuery, { idField: "id" });
+
+  const [equityCurves, setEquityCurves] = useState({});
+
+  // Fetch trades and generate equity curves for each strategy
+  useEffect(() => {
+    const fetchEquityCurves = async () => {
+      if (!strategies || !strategies.length) return;
+      const curves = {};
+      for (const strategy of strategies) {
+        try {
+          const tradesQuery = query(
+            collection(firestore, `strategies/${strategy.id}/trades`),
+            orderBy("order")
+          );
+          const tradesSnapshot = await getDocs(tradesQuery);
+          const trades = tradesSnapshot.docs.map(doc => doc.data());
+          // Generate equity curve
+          let equity = strategy.metrics?.initialCapital || 0;
+          const curve = [];
+          if (trades[0]?.exitDate) {
+            curve.push({ x: 0, y: equity });
+          }
+          trades.forEach((trade, idx) => {
+            equity += trade.netProfit;
+            if (trade.exitDate) {
+              curve.push({ x: idx + 1, y: equity });
+            }
+          });
+          curves[strategy.id] = curve;
+        } catch (e) {
+          curves[strategy.id] = [];
+        }
+      }
+      setEquityCurves(curves);
+    };
+    fetchEquityCurves();
+  }, [strategies, firestore]);
 
   const handleRowCheckboxChange = (id) => {
     setSelectedRows((prevSelectedRows) => {
@@ -325,6 +376,7 @@ const UserStrategies = () => {
                   : ""}
               </TableHead>
               <TableHead>Type</TableHead>
+              {checkedItems.equityCurve && <TableHead>Equity Curve</TableHead>}
               {checkedItems.netProfit && (
                 <TableHead
                   onClick={() => handleSort("netProfit")}
@@ -403,7 +455,8 @@ const UserStrategies = () => {
                     <DropdownMenuContent>
                       <DropdownMenuLabel>Columns</DropdownMenuLabel>
                       <DropdownMenuSeparator />
-                      {Object.entries(checkedItems).map(([key, checked]) => (
+                      {/* Render Equity Curve first, then the rest */}
+                      {["equityCurve", ...Object.keys(checkedItems).filter(k => k !== "equityCurve")].map((key) => (
                         <DropdownMenuItem
                           key={key}
                           onSelect={handleItemSelect}
@@ -411,10 +464,11 @@ const UserStrategies = () => {
                           className="flex items-center"
                         >
                           <Checkbox
-                            checked={checked}
+                            checked={checkedItems[key]}
                             className="w-3.5 h-3.5 mr-2"
                           />
-                          {key.charAt(0).toUpperCase() +
+                          {key === 'equityCurve' ? 'Equity Curve' :
+                            key.charAt(0).toUpperCase() +
                             key
                               .slice(1)
                               .replace(/([A-Z])/g, " $1")
@@ -462,6 +516,23 @@ const UserStrategies = () => {
                       Future
                     </div>
                   </TableCell>
+                  {checkedItems.equityCurve && (
+                    <TableCell>
+                      {equityCurves[strategy.id] === undefined ? (
+                        <div className="flex items-center justify-center h-8">
+                          <LoadingSpinner size={18} />
+                        </div>
+                      ) : equityCurves[strategy.id].length > 1 ? (
+                        <ResponsiveContainer width={100} height={32}>
+                          <LineChart data={equityCurves[strategy.id]} margin={{ top: 6, bottom: 6, left: 0, right: 0 }}>
+                            <Line type="monotone" dataKey="y" stroke="#2563eb" strokeWidth={2} dot={false} isAnimationActive={false} />
+                          </LineChart>
+                        </ResponsiveContainer>
+                      ) : (
+                        <span className="text-gray-400 text-xs">N/A</span>
+                      )}
+                    </TableCell>
+                  )}
                   {checkedItems.netProfit && (
                     <TableCell>
                       {(() => {

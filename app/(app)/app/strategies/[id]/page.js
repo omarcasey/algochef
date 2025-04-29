@@ -555,10 +555,9 @@ const StrategyPage = () => {
           </div>
 
           <div className="flex-1 flex justify-center">
-            <TabsList className="grid w-[320px] grid-cols-3">
+            <TabsList className="grid w-[320px] grid-cols-2">
               <TabsTrigger value="overview">Overview</TabsTrigger>
               <TabsTrigger value="performance">Performance</TabsTrigger>
-              <TabsTrigger value="analysis">Analysis</TabsTrigger>
             </TabsList>
           </div>
 
@@ -587,23 +586,6 @@ const StrategyPage = () => {
 
           {/* Main content */}
           <div className="flex-1 overflow-hidden">
-            <TabsContent
-              value="analysis"
-              className="h-full flex flex-col m-0 p-0 data-[state=active]:flex data-[state=inactive]:hidden"
-            >
-              <ScrollArea className="flex-1 overflow-y-auto">
-                <div className="p-6 space-y-6 pb-24">
-                  <StrategyInfo strategy={strategy} />
-                  <Card className="w-full">
-                    <CardContent className="p-0">
-                      <MonteCarloAnalysis strategy={strategy} trades={trades} />
-                    </CardContent>
-                  </Card>
-                  <div className="h-12"></div>
-                </div>
-              </ScrollArea>
-            </TabsContent>
-
             <TabsContent
               value="overview"
               className="h-full flex flex-col m-0 p-0 data-[state=active]:flex data-[state=inactive]:hidden"
