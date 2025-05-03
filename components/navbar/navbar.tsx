@@ -26,7 +26,7 @@ export const NavBar: FC = () => {
 
   return (
     <>
-      <div className="fixed top-0 w-full z-50 backdrop-blur-md bg-black/60 border-b border-gray-800/60">
+      <div className="fixed top-0 w-full z-50 backdrop-blur-md bg-black/80 border-b border-gray-800">
         <nav className="container px-6 md:px-8 py-4">
           <div className="flex items-center justify-between">
             <Link href="/" className="group relative">

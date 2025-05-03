@@ -96,9 +96,9 @@ const MonteCarloPage = () => {
         {selectedStrategy && selectedStrategyId && trades.length > 0 ? (
           <MonteCarloAnalysis strategy={selectedStrategy} trades={trades} />
         ) : (
-          <div className="flex flex-col items-center justify-center h-full min-h-[300px] bg-white rounded-xl border border-dashed border-muted-foreground/20 p-12 text-center">
-            <div className="text-3xl mb-2 font-semibold text-muted-foreground/80">No Strategy Selected</div>
-            <div className="text-md text-muted-foreground/70 max-w-md">
+          <div className="flex flex-col items-center justify-center h-full min-h-[300px] bg-background rounded-xl border border-dashed border-muted-foreground/20 p-12 text-center">
+            <div className="text-3xl mb-2 font-semibold text-muted-foreground">No Strategy Selected</div>
+            <div className="text-md text-muted-foreground max-w-md">
               Please select a strategy above to begin your Monte Carlo analysis. You can adjust simulation parameters and view results here.
             </div>
           </div>
